@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>METAMORPHOSIS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    touch-action: none;
+  }
+  #gameCanvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+  #ui {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #score { color: #fff; font-size: 15px; font-weight: bold; }
+  #gameLabel { color: rgba(255,255,255,0.4); font-size: 11px; }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+  }
+  #overlay h1 {
+    font-size: 28px;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  #overlay p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+    line-height: 1.8;
+  }
+  #startBtn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.6);
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #startBtn:hover, #startBtn:active { background: rgba(255,255,255,0.1); }
+  #controls {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0 20px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .ctrl-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: rgba(255,255,255,0.7);
+    pointer-events: all;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+    touch-action: manipulation;
+  }
+  .ctrl-btn:active { background: rgba(255,255,255,0.2); }
+  .ctrl-row { display: flex; gap: 10px; }
+  #transitionOverlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    letter-spacing: 6px;
+    color: #fff;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <span id="gameLabel">—</span>
+  <span id="score">0</span>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="controls">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+    <div class="ctrl-row">
+      <div class="ctrl-btn" id="btnUp">▲</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-btn" id="btnLeft">◀</div>
+      <div class="ctrl-btn" id="btnDown">▼</div>
+      <div class="ctrl-btn" id="btnRight">▶</div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <h1>Metamorphosis</h1>
+  <p>5 игр · 1 существо<br>каждая смерть — новое рождение</p>
+  <button id="startBtn" onclick="startGame()">[ начать ]</button>
+</div>
+
+<div id="transitionOverlay" id="transitionOverlay"></div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = () => canvas.width;
+const H = () => canvas.height;
+
+// Resize canvas
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = w;
+  canvas.height = h;
+}
+resize();
+window.addEventListener('resize', () => { resize(); });
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let score = 0;
+let gameMode = 0; // 0=jumper 1=snake 2=arkanoid 3=shooter 4=flappy
+let cycle = 0;
+let morphing = false;
+let morphT = 0; // 0..1
+let morphFrom = 0;
+let morphTo = 0;
+let running = false;
+let particles = [];
+let bgStars = [];
+let gameOver = false;
+
+const MODES = ['ПРЫЖОК', 'ЗМЕЙКА', 'АРКАНОИД', 'ШУТЕР', 'FLAPPY'];
+const COLORS = ['#a855f7','#22c55e','#3b82f6','#f97316','#ec4899'];
+
+// ─── INPUT ────────────────────────────────────────────────────────────────────
+const keys = {};
+let touchJump = false;
+
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space' || e.code === 'ArrowUp') touchJump = true;
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; touchJump = false; });
+
+function setupBtn(id, code) {
+  const el = document.getElementById(id);
+  el.addEventListener('touchstart', e => { e.preventDefault(); keys[code] = true; if(code==='ArrowUp'||code==='Space') touchJump=true; }, {passive:false});
+  el.addEventListener('touchend', e => { e.preventDefault(); keys[code] = false; touchJump=false; }, {passive:false});
+  el.addEventListener('mousedown', e => { keys[code] = true; if(code==='ArrowUp'||code==='Space') touchJump=true; });
+  el.addEventListener('mouseup', e => { keys[code] = false; touchJump=false; });
+}
+setupBtn('btnUp','ArrowUp');
+setupBtn('btnDown','ArrowDown');
+setupBtn('btnLeft','ArrowLeft');
+setupBtn('btnRight','ArrowRight');
+
+canvas.addEventListener('touchstart', e => { e.preventDefault(); touchJump = true; }, {passive:false});
+canvas.addEventListener('touchend', e => { e.preventDefault(); touchJump = false; }, {passive:false});
+
+// ─── PARTICLES ────────────────────────────────────────────────────────────────
+function spawnParticles(x, y, color, count=12) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.02 + Math.random() * 0.03,
+      size: 2 + Math.random() * 4,
+      color
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= p.decay;
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── BACKGROUND ───────────────────────────────────────────────────────────────
+function initStars() {
+  bgStars = [];
+  for (let i = 0; i < 80; i++) {
+    bgStars.push({
+      x: Math.random() * W(),
+      y: Math.random() * H(),
+      r: Math.random() * 1.5,
+      a: Math.random(),
+      speed: 0.2 + Math.random() * 0.5
+    });
+  }
+}
+
+function drawBg() {
+  const c = COLORS[gameMode];
+  ctx.fillStyle = '#05050a';
+  ctx.fillRect(0, 0, W(), H());
+  // tint
+  ctx.globalAlpha = 0.04;
+  ctx.fillStyle = c;
+  ctx.fillRect(0, 0, W(), H());
+  ctx.globalAlpha = 1;
+
+  for (const s of bgStars) {
+    ctx.globalAlpha = s.a * 0.6;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fill();
+    s.y += s.speed;
+    if (s.y > H()) { s.y = 0; s.x = Math.random() * W(); }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME 1: JUMPER (кубик-прыгун)
+// ─────────────────────────────────────────────────────────────────────────────
+const jumper = {
+  x: 0, y: 0, vy: 0,
+  w: 36, h: 36,
+  onGround: false,
+  platforms: [],
+  scrollSpeed: 2,
+  jumpPressed: false,
+
+  init() {
+    this.x = W() * 0.2;
+    this.y = H() - 160;
+    this.vy = 0;
+    this.onGround = false;
+    this.jumpPressed = false;
+    this.platforms = [];
+    this.scrollSpeed = 2 + cycle * 0.4;
+    // generate initial platforms
+    const groundY = H() - 80;
+    // ground platform
+    this.platforms.push({ x: -W(), y: groundY, w: W()*3, h: 20, color: '#333' });
+    // floating platforms
+    for (let i = 0; i < 8; i++) {
+      this.platforms.push(this.newPlatform(W() * 0.4 + i * 180));
+    }
+  },
+
+  newPlatform(x) {
+    const groundY = H() - 80;
+    const y = groundY - 80 - Math.random() * 200;
+    const hasGap = Math.random() < 0.3;
+    return {
+      x, y,
+      w: hasGap ? 0 : 80 + Math.random() * 80,
+      h: 14,
+      color: COLORS[0],
+      isGap: hasGap,
+      hasCoin: Math.random() < 0.4,
+      coinX: x + 40, coinY: y - 20, coinTaken: false
+    };
+  },
+
+  update() {
+    const jumped = touchJump || keys['ArrowUp'] || keys['Space'];
+
+    // jump
+    if (jumped && this.onGround && !this.jumpPressed) {
+      this.vy = -14;
+      this.jumpPressed = true;
+      spawnParticles(this.x + this.w/2, this.y + this.h, COLORS[0], 6);
+    }
+    if (!jumped) this.jumpPressed = false;
+
+    this.vy += 0.55;
+    this.y += this.vy;
+    this.onGround = false;
+
+    // horizontal auto-scroll + input
+    if (keys['ArrowRight']) this.x = Math.min(W()*0.6, this.x + 4);
+    if (keys['ArrowLeft']) this.x = Math.max(30, this.x - 4);
+
+    // scroll platforms
+    for (const p of this.platforms) {
+      p.x -= this.scrollSpeed;
+      if (p.hasCoin) p.coinX -= this.scrollSpeed;
+    }
+    this.platforms = this.platforms.filter(p => p.x + p.w > -100);
+    while (this.platforms.length < 10) {
+      const last = this.platforms.reduce((a,b) => a.x>b.x?a:b);
+      this.platforms.push(this.newPlatform(last.x + 120 + Math.random()*100));
+    }
+
+    // collision with platforms
+    for (const p of this.platforms) {
+      if (this.vy > 0 &&
+          this.x + this.w > p.x && this.x < p.x + p.w &&
+          this.y + this.h > p.y && this.y + this.h < p.y + p.h + 12) {
+        this.y = p.y - this.h;
+        this.vy = 0;
+        this.onGround = true;
+      }
+      // collect coin
+      if (p.hasCoin && !p.coinTaken) {
+        const dx = (this.x + this.w/2) - p.coinX;
+        const dy = (this.y + this.h/2) - p.coinY;
+        if (Math.sqrt(dx*dx+dy*dy) < 20) {
+          p.coinTaken = true;
+          score += 10;
+          spawnParticles(p.coinX, p.coinY, '#fbbf24', 8);
+        }
+      }
+    }
+
+    // death: fell off bottom
+    if (this.y > H() + 100) {
+      spawnParticles(this.x + this.w/2, H(), COLORS[0], 20);
+      triggerMorph(0, 1); // jumper → snake
+    }
+
+    score += 0.02;
+  },
+
+  draw() {
+    const c = COLORS[0];
+    // platforms
+    for (const p of this.platforms) {
+      if (p.isGap) continue;
+      ctx.shadowColor = c;
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = p.color === '#333' ? '#1a1a1a' : c;
+      ctx.globalAlpha = p.color === '#333' ? 0.5 : 0.8;
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      // coin
+      if (p.hasCoin && !p.coinTaken) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.coinX, p.coinY, 8, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+    // player cube
+    const px = this.x, py = this.y;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = c;
+    ctx.fillRect(px, py, this.w, this.h);
+    ctx.shadowBlur = 0;
+    // eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(px+7, py+9, 7, 9);
+    ctx.fillRect(px+22, py+9, 7, 9);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(px+9, py+12, 4, 5);
+    ctx.fillRect(px+24, py+12, 4, 5);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME 2: SNAKE (змейка)
+// ─────────────────────────────────────────────────────────────────────────────
+const snake = {
+  body: [],
+  dir: {x:1,y:0},
+  nextDir: {x:1,y:0},
+  food: [],
+  specialFood: null,
+  cellSize: 20,
+  gridW: 0, gridH: 0,
+  timer: 0,
+  speed: 6,
+  fieldX: 0, fieldY: 60,
+  fieldW: 0, fieldH: 0,
+
+  init() {
+    this.cellSize = Math.floor(Math.min(W(), H()*0.7) / 20);
+    this.gridW = Math.floor(W() / this.cellSize);
+    this.gridH = Math.floor((H() - 140) / this.cellSize);
+    this.fieldX = Math.floor((W() - this.gridW * this.cellSize) / 2);
+    this.fieldY = 60;
+    this.fieldW = this.gridW * this.cellSize;
+    this.fieldH = this.gridH * this.cellSize;
+    this.body = [];
+    const cx = Math.floor(this.gridW/2);
+    const cy = Math.floor(this.gridH/2);
+    for (let i = 3; i >= 0; i--) this.body.push({x: cx-i, y: cy});
+    this.dir = {x:1,y:0};
+    this.nextDir = {x:1,y:0};
+    this.food = [];
+    this.specialFood = null;
+    this.timer = 0;
+    this.speed = 6 + cycle;
+    this.spawnFood();
+    this.spawnFood();
+    this.spawnSpecial();
+  },
+
+  spawnFood() {
+    let tries = 0;
+    while (tries++ < 100) {
+      const x = Math.floor(Math.random() * this.gridW);
+      const y = Math.floor(Math.random() * this.gridH);
+      if (!this.body.find(b=>b.x===x&&b.y===y) && !(this.food.find(f=>f.x===x&&f.y===y))) {
+        this.food.push({x,y});
+        return;
+      }
+    }
+  },
+
+  spawnSpecial() {
+    let tries = 0;
+    while (tries++ < 100) {
+      const x = Math.floor(Math.random() * this.gridW);
+      const y = Math.floor(Math.random() * this.gridH);
+      if (!this.body.find(b=>b.x===x&&b.y===y)) {
+        this.specialFood = {x, y, pulse: 0};
+        return;
+      }
+    }
+  },
+
+  update() {
+    if (keys['ArrowUp'] && this.dir.y !== 1) this.nextDir = {x:0,y:-1};
+    if (keys['ArrowDown'] && this.dir.y !== -1) this.nextDir = {x:0,y:1};
+    if (keys['ArrowLeft'] && this.dir.x !== 1) this.nextDir = {x:-1,y:0};
+    if (keys['ArrowRight'] && this.dir.x !== -1) this.nextDir = {x:1,y:0};
+
+    this.timer++;
+    if (this.timer < this.speed) return;
+    this.timer = 0;
+    this.dir = {...this.nextDir};
+
+    const head = this.body[this.body.length-1];
+    const nx = head.x + this.dir.x;
+    const ny = head.y + this.dir.y;
+
+    // wall collision
+    if (nx < 0 || nx >= this.gridW || ny < 0 || ny >= this.gridH) {
+      spawnParticles(this.fieldX + head.x * this.cellSize, this.fieldY + head.y * this.cellSize, COLORS[1], 16);
+      triggerMorph(1, 2);
+      return;
+    }
+    // self collision
+    if (this.body.slice(0,-1).find(b=>b.x===nx&&b.y===ny)) {
+      spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, COLORS[1], 16);
+      triggerMorph(1, 2);
+      return;
+    }
+
+    this.body.push({x:nx,y:ny});
+    let ate = false;
+
+    // eat food
+    const fi = this.food.findIndex(f=>f.x===nx&&f.y===ny);
+    if (fi !== -1) {
+      this.food.splice(fi,1);
+      this.spawnFood();
+      score += 15;
+      ate = true;
+      spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#fbbf24', 6);
+    }
+    // eat special — TRIGGERS MORPH
+    if (this.specialFood && this.specialFood.x===nx && this.specialFood.y===ny) {
+      score += 50;
+      spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#fff', 20);
+      triggerMorph(1, 2);
+      return;
+    }
+    if (!ate) this.body.shift();
+    if (this.specialFood) this.specialFood.pulse += 0.1;
+  },
+
+  draw() {
+    const c = COLORS[1];
+    const cs = this.cellSize;
+    const fx = this.fieldX, fy = this.fieldY;
+
+    // field border
+    ctx.strokeStyle = c;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(fx, fy, this.fieldW, this.fieldH);
+    ctx.globalAlpha = 1;
+
+    // food
+    for (const f of this.food) {
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(fx + f.x*cs + cs/2, fy + f.y*cs + cs/2, cs/2-2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // special food
+    if (this.specialFood) {
+      const pulse = Math.sin(this.specialFood.pulse) * 3;
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 14 + pulse;
+      ctx.beginPath();
+      ctx.arc(fx + this.specialFood.x*cs + cs/2, fy + this.specialFood.y*cs + cs/2, cs/2+pulse, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // snake body
+    for (let i = 0; i < this.body.length; i++) {
+      const b = this.body[i];
+      const t = i / this.body.length;
+      ctx.fillStyle = c;
+      ctx.globalAlpha = 0.4 + t * 0.6;
+      ctx.shadowColor = c;
+      ctx.shadowBlur = i === this.body.length-1 ? 12 : 4;
+      const pad = i === this.body.length-1 ? 1 : 2;
+      ctx.fillRect(fx + b.x*cs + pad, fy + b.y*cs + pad, cs - pad*2, cs - pad*2);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+    // head eyes
+    const h = this.body[this.body.length-1];
+    ctx.fillStyle = '#fff';
+    const hx = fx + h.x*cs + 4;
+    const hy = fy + h.y*cs + 4;
+    ctx.fillRect(hx, hy, 4, 4);
+    ctx.fillRect(hx + cs - 10, hy, 4, 4);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME 3: ARKANOID
+// ─────────────────────────────────────────────────────────────────────────────
+const arkanoid = {
+  ball: {x:0,y:0,vx:3,vy:-4,r:8},
+  paddle: {x:0,y:0,w:90,h:12,speed:7},
+  bricks: [],
+  brickRows: 4,
+  brickCols: 7,
+  brickW: 0, brickH: 22,
+  brickPad: 5,
+  fieldX: 20, fieldY: 60,
+  fieldW: 0,
+
+  init() {
+    this.fieldW = W() - 40;
+    this.fieldX = 20;
+    this.paddle.x = W()/2 - this.paddle.w/2;
+    this.paddle.y = H() - 100;
+    this.brickW = Math.floor((this.fieldW - (this.brickCols+1)*this.brickPad) / this.brickCols);
+    this.bricks = [];
+    const rows = 3 + cycle;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < this.brickCols; c++) {
+        const bx = this.fieldX + this.brickPad + c*(this.brickW + this.brickPad);
+        const by = this.fieldY + 20 + r*(this.brickH + this.brickPad);
+        this.bricks.push({
+          x: bx, y: by, w: this.brickW, h: this.brickH,
+          hp: r < 2 ? 1 : 2,
+          special: (r === rows-1 && c === Math.floor(this.brickCols/2)),
+          color: COLORS[2]
+        });
+      }
+    }
+    this.ball.x = W()/2;
+    this.ball.y = this.paddle.y - 20;
+    const angle = -Math.PI/2 + (Math.random()-0.5)*0.8;
+    const spd = 5 + cycle * 0.5;
+    this.ball.vx = Math.cos(angle) * spd;
+    this.ball.vy = Math.sin(angle) * spd;
+  },
+
+  update() {
+    // paddle movement
+    if (keys['ArrowLeft']) this.paddle.x = Math.max(this.fieldX, this.paddle.x - this.paddle.speed);
+    if (keys['ArrowRight']) this.paddle.x = Math.min(this.fieldX + this.fieldW - this.paddle.w, this.paddle.x + this.paddle.speed);
+
+    this.ball.x += this.ball.vx;
+    this.ball.y += this.ball.vy;
+
+    // wall bounce
+    if (this.ball.x - this.ball.r < this.fieldX) { this.ball.x = this.fieldX + this.ball.r; this.ball.vx *= -1; }
+    if (this.ball.x + this.ball.r > this.fieldX + this.fieldW) { this.ball.x = this.fieldX + this.fieldW - this.ball.r; this.ball.vx *= -1; }
+    if (this.ball.y - this.ball.r < this.fieldY) { this.ball.y = this.fieldY + this.ball.r; this.ball.vy *= -1; }
+
+    // ball lost
+    if (this.ball.y > H() + 30) {
+      spawnParticles(this.ball.x, H()-50, COLORS[2], 16);
+      this.ball.x = W()/2;
+      this.ball.y = this.paddle.y - 20;
+      const angle = -Math.PI/2 + (Math.random()-0.5)*0.8;
+      const spd = 5 + cycle * 0.5;
+      this.ball.vx = Math.cos(angle) * spd;
+      this.ball.vy = Math.sin(angle) * spd;
+    }
+
+    // paddle collision
+    const px = this.paddle.x, py = this.paddle.y;
+    if (this.ball.y + this.ball.r > py && this.ball.y < py + this.paddle.h &&
+        this.ball.x > px && this.ball.x < px + this.paddle.w && this.ball.vy > 0) {
+      const rel = (this.ball.x - (px + this.paddle.w/2)) / (this.paddle.w/2);
+      const angle = rel * (Math.PI/3) - Math.PI/2;
+      const spd = Math.sqrt(this.ball.vx**2 + this.ball.vy**2);
+      this.ball.vx = Math.cos(angle) * spd;
+      this.ball.vy = Math.sin(angle) * spd;
+      this.ball.y = py - this.ball.r;
+      spawnParticles(this.ball.x, py, COLORS[2], 4);
+    }
+
+    // brick collision
+    for (let i = this.bricks.length - 1; i >= 0; i--) {
+      const b = this.bricks[i];
+      if (this.ball.x + this.ball.r > b.x && this.ball.x - this.ball.r < b.x + b.w &&
+          this.ball.y + this.ball.r > b.y && this.ball.y - this.ball.r < b.y + b.h) {
+        // determine bounce direction
+        const overlapLeft = (this.ball.x + this.ball.r) - b.x;
+        const overlapRight = (b.x + b.w) - (this.ball.x - this.ball.r);
+        const overlapTop = (this.ball.y + this.ball.r) - b.y;
+        const overlapBottom = (b.y + b.h) - (this.ball.y - this.ball.r);
+        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+        if (minOverlap === overlapLeft || minOverlap === overlapRight) this.ball.vx *= -1;
+        else this.ball.vy *= -1;
+
+        b.hp--;
+        score += 10;
+        spawnParticles(b.x + b.w/2, b.y + b.h/2, COLORS[2], 6);
+        if (b.special) {
+          score += 50;
+          spawnParticles(b.x+b.w/2, b.y+b.h/2, '#fff', 20);
+          triggerMorph(2, 3);
+          return;
+        }
+        if (b.hp <= 0) this.bricks.splice(i, 1);
+      }
+    }
+
+    // all bricks gone
+    if (this.bricks.length === 0) {
+      triggerMorph(2, 3);
+    }
+
+    score += 0.01;
+  },
+
+  draw() {
+    const c = COLORS[2];
+    // bricks
+    for (const b of this.bricks) {
+      ctx.fillStyle = b.special ? '#fff' : c;
+      ctx.globalAlpha = b.hp > 1 ? 1 : 0.6;
+      ctx.shadowColor = b.special ? '#fff' : c;
+      ctx.shadowBlur = b.special ? 14 : 6;
+      ctx.fillRect(b.x+1, b.y+1, b.w-2, b.h-2);
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+    // paddle
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 10;
+    ctx.fillRect(this.paddle.x, this.paddle.y, this.paddle.w, this.paddle.h);
+    ctx.shadowBlur = 0;
+    // ball
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = '#fff';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(this.ball.x, this.ball.y, this.ball.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME 4: SPACE SHOOTER
+// ─────────────────────────────────────────────────────────────────────────────
+const shooter = {
+  ship: {x:0,y:0,w:30,h:40},
+  bullets: [],
+  enemies: [],
+  boss: null,
+  bossHP: 0,
+  bossMaxHP: 0,
+  shootTimer: 0,
+  enemyTimer: 0,
+  kills: 0,
+  killsNeeded: 8,
+
+  init() {
+    this.ship.x = W()/2 - 15;
+    this.ship.y = H() - 120;
+    this.bullets = [];
+    this.enemies = [];
+    this.boss = null;
+    this.shootTimer = 0;
+    this.enemyTimer = 0;
+    this.kills = 0;
+    this.killsNeeded = 6 + cycle * 2;
+    this.bossHP = 0;
+    this.bossMaxHP = 20 + cycle * 5;
+  },
+
+  spawnEnemy() {
+    const x = 30 + Math.random() * (W()-60);
+    this.enemies.push({
+      x, y: -30, w: 28, h: 28,
+      vx: (Math.random()-0.5) * 2,
+      vy: 1.5 + Math.random() * 1.5 + cycle * 0.3,
+      hp: 1
+    });
+  },
+
+  update() {
+    const spd = 5;
+    if (keys['ArrowLeft']) this.ship.x = Math.max(0, this.ship.x - spd);
+    if (keys['ArrowRight']) this.ship.x = Math.min(W()-this.ship.w, this.ship.x + spd);
+    if (keys['ArrowUp']) this.ship.y = Math.max(H()*0.3, this.ship.y - spd);
+    if (keys['ArrowDown']) this.ship.y = Math.min(H()-this.ship.h-80, this.ship.y + spd);
+
+    // auto-shoot
+    this.shootTimer++;
+    if (this.shootTimer > Math.max(8 - cycle, 4)) {
+      this.shootTimer = 0;
+      this.bullets.push({x: this.ship.x + this.ship.w/2, y: this.ship.y, vy: -10, r: 4});
+    }
+
+    // spawn enemies
+    if (!this.boss) {
+      this.enemyTimer++;
+      if (this.enemyTimer > Math.max(40 - cycle*3, 15)) {
+        this.enemyTimer = 0;
+        this.spawnEnemy();
+      }
+    }
+
+    // move bullets
+    for (const b of this.bullets) b.y += b.vy;
+    this.bullets = this.bullets.filter(b => b.y > -10);
+
+    // move enemies
+    for (const e of this.enemies) {
+      e.x += e.vx;
+      e.y += e.vy;
+      if (e.x < 0 || e.x > W()) e.vx *= -1;
+    }
+    this.enemies = this.enemies.filter(e => e.y < H() + 40);
+
+    // boss
+    if (this.boss) {
+      this.boss.x += this.boss.vx;
+      if (this.boss.x < 40 || this.boss.x > W()-80) this.boss.vx *= -1;
+      this.boss.y += Math.sin(Date.now()*0.001) * 0.5;
+      // boss shoots
+      this.boss.shootT++;
+      if (this.boss.shootT > 30) {
+        this.boss.shootT = 0;
+        const angle = Math.atan2(this.ship.y - this.boss.y, this.ship.x - this.boss.x);
+        this.boss.bullets.push({x: this.boss.x + 40, y: this.boss.y + 40, vx: Math.cos(angle)*4, vy: Math.sin(angle)*4});
+      }
+      // boss bullets
+      for (const bb of this.boss.bullets) { bb.x += bb.vx; bb.y += bb.vy; }
+      this.boss.bullets = this.boss.bullets.filter(b => b.x > 0 && b.x < W() && b.y < H());
+      // boss bullet hits ship
+      for (const bb of this.boss.bullets) {
+        if (Math.abs(bb.x - (this.ship.x+15)) < 20 && Math.abs(bb.y - (this.ship.y+20)) < 25) {
+          spawnParticles(this.ship.x+15, this.ship.y+20, COLORS[3], 20);
+          triggerMorph(3, 4);
+          return;
+        }
+      }
+    }
+
+    // bullet hits enemy
+    for (let bi = this.bullets.length-1; bi >= 0; bi--) {
+      const b = this.bullets[bi];
+      if (this.boss) {
+        if (b.x > this.boss.x && b.x < this.boss.x+80 && b.y > this.boss.y && b.y < this.boss.y+60) {
+          this.boss.hp--;
+          this.boss.flash = 5;
+          this.bullets.splice(bi,1);
+          score += 5;
+          spawnParticles(b.x, b.y, COLORS[3], 4);
+          if (this.boss.hp <= 0) {
+            spawnParticles(this.boss.x+40, this.boss.y+30, '#fff', 30);
+            score += 200;
+            triggerMorph(3, 4);
+            return;
+          }
+          continue;
+        }
+      }
+      for (let ei = this.enemies.length-1; ei >= 0; ei--) {
+        const e = this.enemies[ei];
+        if (b.x > e.x && b.x < e.x+e.w && b.y > e.y && b.y < e.y+e.h) {
+          e.hp--;
+          this.bullets.splice(bi,1);
+          score += 10;
+          spawnParticles(b.x, b.y, COLORS[3], 6);
+          if (e.hp <= 0) {
+            this.enemies.splice(ei,1);
+            this.kills++;
+            if (this.kills >= this.killsNeeded && !this.boss) {
+              this.boss = {x: W()/2-40, y: 80, vx: 2, hp: this.bossMaxHP, shootT: 0, bullets: [], flash: 0};
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    // enemy hits ship
+    for (const e of this.enemies) {
+      if (e.x + e.w > this.ship.x && e.x < this.ship.x + this.ship.w &&
+          e.y + e.h > this.ship.y && e.y < this.ship.y + this.ship.h) {
+        spawnParticles(this.ship.x+15, this.ship.y+20, COLORS[3], 20);
+        triggerMorph(3, 4);
+        return;
+      }
+    }
+
+    if (this.boss && this.boss.flash > 0) this.boss.flash--;
+    score += 0.02;
+  },
+
+  draw() {
+    const c = COLORS[3];
+    // bullets
+    for (const b of this.bullets) {
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = c;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    // enemies
+    for (const e of this.enemies) {
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      // simple alien shape
+      ctx.moveTo(e.x + e.w/2, e.y);
+      ctx.lineTo(e.x + e.w, e.y + e.h*0.6);
+      ctx.lineTo(e.x + e.w*0.75, e.y + e.h);
+      ctx.lineTo(e.x + e.w*0.25, e.y + e.h);
+      ctx.lineTo(e.x, e.y + e.h*0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    // boss
+    if (this.boss) {
+      const flash = this.boss.flash > 0;
+      ctx.fillStyle = flash ? '#fff' : c;
+      ctx.shadowColor = c;
+      ctx.shadowBlur = 20;
+      ctx.fillRect(this.boss.x, this.boss.y, 80, 60);
+      ctx.shadowBlur = 0;
+      // boss HP bar
+      const bpct = this.boss.hp / this.bossMaxHP;
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(W()/2-80, 44, 160, 8);
+      ctx.fillStyle = c;
+      ctx.fillRect(W()/2-80, 44, 160*bpct, 8);
+      // boss bullets
+      for (const bb of this.boss.bullets) {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(bb.x, bb.y, 5, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    // ship
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.moveTo(this.ship.x + this.ship.w/2, this.ship.y);
+    ctx.lineTo(this.ship.x + this.ship.w, this.ship.y + this.ship.h);
+    ctx.lineTo(this.ship.x + this.ship.w*0.6, this.ship.y + this.ship.h*0.7);
+    ctx.lineTo(this.ship.x + this.ship.w*0.4, this.ship.y + this.ship.h*0.7);
+    ctx.lineTo(this.ship.x, this.ship.y + this.ship.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // kill progress (before boss)
+    if (!this.boss) {
+      const pct = Math.min(this.kills / this.killsNeeded, 1);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(W()/2-60, 44, 120, 6);
+      ctx.fillStyle = c;
+      ctx.fillRect(W()/2-60, 44, 120*pct, 6);
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME 5: FLAPPY
+// ─────────────────────────────────────────────────────────────────────────────
+const flappy = {
+  bird: {x:0,y:0,vy:0,r:14,angle:0},
+  pipes: [],
+  pipeW: 52,
+  gap: 160,
+  pipeSpeed: 3,
+  pipeTimer: 0,
+  pipeInterval: 110,
+  gravity: 0.45,
+  jumpForce: -8,
+  jumped: false,
+
+  init() {
+    this.bird.x = W() * 0.25;
+    this.bird.y = H() / 2;
+    this.bird.vy = 0;
+    this.bird.angle = 0;
+    this.pipes = [];
+    this.pipeTimer = 0;
+    this.pipeSpeed = 3 + cycle * 0.4;
+    this.gap = Math.max(110, 160 - cycle * 10);
+    this.jumped = false;
+  },
+
+  spawnPipe() {
+    const minY = 100;
+    const maxY = H() - 160;
+    const gapY = minY + Math.random() * (maxY - minY);
+    this.pipes.push({
+      x: W() + this.pipeW,
+      topH: gapY - this.gap/2,
+      botY: gapY + this.gap/2,
+      passed: false
+    });
+  },
+
+  update() {
+    const jump = touchJump || keys['ArrowUp'] || keys['Space'];
+    if (jump && !this.jumped) {
+      this.bird.vy = this.jumpForce;
+      this.jumped = true;
+      spawnParticles(this.bird.x, this.bird.y, COLORS[4], 5);
+    }
+    if (!jump) this.jumped = false;
+
+    this.bird.vy += this.gravity;
+    this.bird.y += this.bird.vy;
+    this.bird.angle = Math.max(-0.4, Math.min(0.6, this.bird.vy * 0.06));
+
+    if (this.bird.y - this.bird.r < 0 || this.bird.y + this.bird.r > H() - 60) {
+      spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
+      triggerMorph(4, 0); // back to jumper! cycle++
+      return;
+    }
+
+    this.pipeTimer++;
+    if (this.pipeTimer > this.pipeInterval) {
+      this.pipeTimer = 0;
+      this.spawnPipe();
+    }
+
+    for (const p of this.pipes) {
+      p.x -= this.pipeSpeed;
+      // score
+      if (!p.passed && p.x + this.pipeW < this.bird.x) {
+        p.passed = true;
+        score += 20;
+        spawnParticles(this.bird.x, this.bird.y, '#fbbf24', 4);
+      }
+      // collision
+      if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + this.pipeW) {
+        if (this.bird.y - this.bird.r < p.topH || this.bird.y + this.bird.r > p.botY) {
+          spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
+          triggerMorph(4, 0);
+          return;
+        }
+      }
+    }
+    this.pipes = this.pipes.filter(p => p.x > -this.pipeW - 10);
+    score += 0.03;
+  },
+
+  draw() {
+    const c = COLORS[4];
+    // pipes
+    for (const p of this.pipes) {
+      ctx.fillStyle = c;
+      ctx.shadowColor = c;
+      ctx.shadowBlur = 8;
+      // top pipe
+      ctx.fillRect(p.x, 0, this.pipeW, p.topH);
+      // bottom pipe
+      ctx.fillRect(p.x, p.botY, this.pipeW, H() - p.botY);
+      ctx.shadowBlur = 0;
+      // pipe caps
+      ctx.fillStyle = c;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(p.x - 4, p.topH - 16, this.pipeW + 8, 16);
+      ctx.fillRect(p.x - 4, p.botY, this.pipeW + 8, 16);
+      ctx.globalAlpha = 1;
+    }
+    // ground line
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(0, H()-60, W(), 60);
+
+    // bird
+    ctx.save();
+    ctx.translate(this.bird.x, this.bird.y);
+    ctx.rotate(this.bird.angle);
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 16;
+    // body
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.bird.r, this.bird.r * 0.75, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // wing
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(-4, 2, 8, 5, -0.3, 0, Math.PI*2);
+    ctx.fill();
+    // eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(6, -3, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(7, -3, 2, 0, Math.PI*2);
+    ctx.fill();
+    // beak
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(12, -1);
+    ctx.lineTo(18, 2);
+    ctx.lineTo(12, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+};
+
+// ─── MORPH TRANSITION ─────────────────────────────────────────────────────────
+let morphAnimFrame = 0;
+let onMorphComplete = null;
+
+function triggerMorph(from, to) {
+  if (morphing) return;
+  morphing = true;
+  morphFrom = from;
+  morphTo = to;
+  morphT = 0;
+  morphAnimFrame = 0;
+  onMorphComplete = () => {
+    gameMode = to;
+    if (to === 0) cycle++;
+    initCurrentGame();
+  };
+
+  const overlay = document.getElementById('transitionOverlay');
+  const names = ['ПРЫЖОК → ЗМЕЙКА','ЗМЕЙКА → АРКАНОИД','АРКАНОИД → ШУТЕР','ШУТЕР → FLAPPY','FLAPPY → ПРЫЖОК'];
+  const idx = from;
+  overlay.textContent = names[idx] || '...';
+
+  // fade in
+  let fadeIn = 0;
+  const doFade = () => {
+    fadeIn += 0.06;
+    overlay.style.opacity = Math.min(fadeIn, 1);
+    if (fadeIn < 1) requestAnimationFrame(doFade);
+    else setTimeout(() => {
+      onMorphComplete();
+      // fade out
+      let fadeOut = 1;
+      const doFadeOut = () => {
+        fadeOut -= 0.06;
+        overlay.style.opacity = Math.max(fadeOut, 0);
+        if (fadeOut > 0) requestAnimationFrame(doFadeOut);
+        else { morphing = false; overlay.style.opacity = 0; }
+      };
+      requestAnimationFrame(doFadeOut);
+    }, 600);
+  };
+  requestAnimationFrame(doFade);
+}
+
+// ─── GAME MANAGEMENT ──────────────────────────────────────────────────────────
+function initCurrentGame() {
+  particles = [];
+  switch(gameMode) {
+    case 0: jumper.init(); break;
+    case 1: snake.init(); break;
+    case 2: arkanoid.init(); break;
+    case 3: shooter.init(); break;
+    case 4: flappy.init(); break;
+  }
+  document.getElementById('gameLabel').textContent = MODES[gameMode];
+}
+
+function updateCurrent() {
+  if (morphing) return;
+  switch(gameMode) {
+    case 0: jumper.update(); break;
+    case 1: snake.update(); break;
+    case 2: arkanoid.update(); break;
+    case 3: shooter.update(); break;
+    case 4: flappy.update(); break;
+  }
+}
+
+function drawCurrent() {
+  switch(gameMode) {
+    case 0: jumper.draw(); break;
+    case 1: snake.draw(); break;
+    case 2: arkanoid.draw(); break;
+    case 3: shooter.draw(); break;
+    case 4: flappy.draw(); break;
+  }
+}
+
+// ─── MAIN LOOP ────────────────────────────────────────────────────────────────
+let lastTime = 0;
+function loop(ts) {
+  if (!running) return;
+  requestAnimationFrame(loop);
+
+  drawBg();
+  updateCurrent();
+  drawCurrent();
+  updateParticles();
+  drawParticles();
+
+  // HUD
+  document.getElementById('score').textContent = Math.floor(score);
+
+  // cycle indicator
+  if (cycle > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '11px Courier New';
+    ctx.letterSpacing = '2px';
+    ctx.fillText('ЦИКЛ ' + cycle, W()/2 - 24, H() - 8);
+  }
+}
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  running = true;
+  score = 0;
+  cycle = 0;
+  gameMode = 0;
+  initStars();
+  initCurrentGame();
+  requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
