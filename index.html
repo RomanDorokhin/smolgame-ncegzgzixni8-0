@@ -112,17 +112,10 @@
   #transitionOverlay {
     position: fixed;
     inset: 0;
-    background: #000;
     z-index: 50;
     pointer-events: none;
     opacity: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    letter-spacing: 6px;
-    color: #fff;
-    text-transform: uppercase;
+    display: none;
   }
 </style>
 </head>
@@ -150,11 +143,11 @@
 
 <div id="overlay">
   <h1>Metamorphosis</h1>
-  <p>5 игр · 1 существо<br>каждая смерть — новое рождение</p>
+  <p>Одно существо · пять форм · порядок меняется каждый цикл<br>смерть в форме — перерождение в следующую · метаморфоз на экране</p>
   <button id="startBtn" onclick="startGame()">[ начать ]</button>
 </div>
 
-<div id="transitionOverlay" id="transitionOverlay"></div>
+<div id="transitionOverlay" aria-hidden="true"></div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -174,19 +167,60 @@ window.addEventListener('resize', () => { resize(); });
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let score = 0;
-let gameMode = 0; // 0=jumper 1=snake 2=arkanoid 3=shooter 4=flappy
+/** 0=cube 1=snake 2=arkanoid 3=shooter 4=bird — порядок [0, shuffle(1–3), 4] */
+let stageOrder = [0, 1, 2, 3, 4];
+let stageIndex = 0;
+let gameMode = 0;
 let cycle = 0;
 let morphing = false;
-let morphT = 0; // 0..1
+let morphT = 0;
 let morphFrom = 0;
 let morphTo = 0;
+let morphDuration = 1200;
+let morphSnapshotFrom = null;
+let morphSnapshotTo = null;
+let morphStyle = 'flow';
+let lastMorphReason = 'objective';
 let running = false;
 let particles = [];
 let bgStars = [];
-let gameOver = false;
-
-const MODES = ['ПРЫЖОК', 'ЗМЕЙКА', 'АРКАНОИД', 'ШУТЕР', 'FLAPPY'];
+const MODES = ['КУБИК', 'ЗМЕЙКА', 'АРКАНОИД', 'ШУТЕР', 'ПТИЦА'];
 const COLORS = ['#a855f7','#22c55e','#3b82f6','#f97316','#ec4899'];
+
+function shuffleMidStages() {
+  const m = [1, 2, 3];
+  for (let i = m.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [m[i], m[j]] = [m[j], m[i]];
+  }
+  stageOrder = [0, m[0], m[1], m[2], 4];
+}
+
+function syncGameModeFromStage() {
+  gameMode = stageOrder[stageIndex];
+}
+
+/** После метаморфозы: следующая стадия в цепочке; возврат к кубу = новый цикл и новый порядок средних форм. */
+function advanceStageAfterMorph() {
+  stageIndex = (stageIndex + 1) % 5;
+  if (stageIndex === 0) {
+    cycle++;
+    shuffleMidStages();
+  }
+  syncGameModeFromStage();
+}
+
+function pickMorphStyle(reason) {
+  const r = Math.random();
+  if (reason === 'death') {
+    if (r < 0.35) return { style: 'flash', ms: 180 + Math.random() * 120 };
+    if (r < 0.7) return { style: 'flow', ms: 900 + Math.random() * 500 };
+    return { style: 'creep', ms: 1600 + Math.random() * 700 };
+  }
+  if (r < 0.25) return { style: 'flash', ms: 220 + Math.random() * 100 };
+  if (r < 0.55) return { style: 'flow', ms: 700 + Math.random() * 400 };
+  return { style: 'creep', ms: 1400 + Math.random() * 600 };
+}
 
 // ─── INPUT ────────────────────────────────────────────────────────────────────
 const keys = {};
@@ -326,8 +360,8 @@ const jumper = {
       h: 14,
       color: COLORS[0],
       isGap: hasGap,
-      hasCoin: Math.random() < 0.4,
-      coinX: x + 40, coinY: y - 20, coinTaken: false
+      hasCrystal: Math.random() < 0.45,
+      crystalX: x + 40, crystalY: y - 24, crystalTaken: false
     };
   },
 
@@ -353,7 +387,7 @@ const jumper = {
     // scroll platforms
     for (const p of this.platforms) {
       p.x -= this.scrollSpeed;
-      if (p.hasCoin) p.coinX -= this.scrollSpeed;
+      if (p.hasCrystal) p.crystalX -= this.scrollSpeed;
     }
     this.platforms = this.platforms.filter(p => p.x + p.w > -100);
     while (this.platforms.length < 10) {
@@ -370,22 +404,25 @@ const jumper = {
         this.vy = 0;
         this.onGround = true;
       }
-      // collect coin
-      if (p.hasCoin && !p.coinTaken) {
-        const dx = (this.x + this.w/2) - p.coinX;
-        const dy = (this.y + this.h/2) - p.coinY;
-        if (Math.sqrt(dx*dx+dy*dy) < 20) {
-          p.coinTaken = true;
-          score += 10;
-          spawnParticles(p.coinX, p.coinY, '#fbbf24', 8);
+      // collect crystal — метаморфоз по ТЗ
+      if (p.hasCrystal && !p.crystalTaken) {
+        const dx = (this.x + this.w/2) - p.crystalX;
+        const dy = (this.y + this.h/2) - p.crystalY;
+        if (Math.sqrt(dx*dx+dy*dy) < 22) {
+          p.crystalTaken = true;
+          score += 25;
+          spawnParticles(p.crystalX, p.crystalY, '#a78bfa', 14);
+          triggerMorph('objective');
+          return;
         }
       }
     }
 
-    // death: fell off bottom
+    // смерть в форме кубика — перерождение в следующую (не «конец игры»)
     if (this.y > H() + 100) {
       spawnParticles(this.x + this.w/2, H(), COLORS[0], 20);
-      triggerMorph(0, 1); // jumper → snake
+      triggerMorph('death');
+      return;
     }
 
     score += 0.02;
@@ -403,13 +440,19 @@ const jumper = {
       ctx.fillRect(p.x, p.y, p.w, p.h);
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
-      // coin
-      if (p.hasCoin && !p.coinTaken) {
-        ctx.fillStyle = '#fbbf24';
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 8;
+      // кристалл
+      if (p.hasCrystal && !p.crystalTaken) {
+        const cx = p.crystalX, cy = p.crystalY;
+        ctx.fillStyle = '#c4b5fd';
+        ctx.shadowColor = '#8b5cf6';
+        ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.arc(p.coinX, p.coinY, 8, 0, Math.PI*2);
+        ctx.moveTo(cx, cy - 10);
+        ctx.lineTo(cx + 8, cy - 2);
+        ctx.lineTo(cx + 6, cy + 8);
+        ctx.lineTo(cx - 6, cy + 8);
+        ctx.lineTo(cx - 8, cy - 2);
+        ctx.closePath();
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -439,7 +482,8 @@ const snake = {
   dir: {x:1,y:0},
   nextDir: {x:1,y:0},
   food: [],
-  specialFood: null,
+  mealsEaten: 0,
+  mealsNeeded: 5,
   cellSize: 20,
   gridW: 0, gridH: 0,
   timer: 0,
@@ -462,12 +506,13 @@ const snake = {
     this.dir = {x:1,y:0};
     this.nextDir = {x:1,y:0};
     this.food = [];
-    this.specialFood = null;
+    this.mealsEaten = 0;
+    this.mealsNeeded = 4 + Math.floor(cycle * 0.5);
     this.timer = 0;
     this.speed = 6 + cycle;
     this.spawnFood();
     this.spawnFood();
-    this.spawnSpecial();
+    this.ensureMealsOnField();
   },
 
   spawnFood() {
@@ -476,19 +521,28 @@ const snake = {
       const x = Math.floor(Math.random() * this.gridW);
       const y = Math.floor(Math.random() * this.gridH);
       if (!this.body.find(b=>b.x===x&&b.y===y) && !(this.food.find(f=>f.x===x&&f.y===y))) {
-        this.food.push({x,y});
+        this.food.push({ x, y, isMeal: false, pulse: 0 });
         return;
       }
     }
   },
 
-  spawnSpecial() {
+  countMealsOnFood() {
+    return this.food.filter(f => f.isMeal).length;
+  },
+
+  ensureMealsOnField() {
+    const need = 2 - this.countMealsOnFood();
+    for (let k = 0; k < need; k++) this.spawnMeal();
+  },
+
+  spawnMeal() {
     let tries = 0;
-    while (tries++ < 100) {
+    while (tries++ < 120) {
       const x = Math.floor(Math.random() * this.gridW);
       const y = Math.floor(Math.random() * this.gridH);
-      if (!this.body.find(b=>b.x===x&&b.y===y)) {
-        this.specialFood = {x, y, pulse: 0};
+      if (!this.body.find(b=>b.x===x&&b.y===y) && !this.food.find(f=>f.x===x&&f.y===y)) {
+        this.food.push({ x, y, isMeal: true, pulse: Math.random() * 6 });
         return;
       }
     }
@@ -512,13 +566,13 @@ const snake = {
     // wall collision
     if (nx < 0 || nx >= this.gridW || ny < 0 || ny >= this.gridH) {
       spawnParticles(this.fieldX + head.x * this.cellSize, this.fieldY + head.y * this.cellSize, COLORS[1], 16);
-      triggerMorph(1, 2);
+      triggerMorph('death');
       return;
     }
     // self collision
     if (this.body.slice(0,-1).find(b=>b.x===nx&&b.y===ny)) {
       spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, COLORS[1], 16);
-      triggerMorph(1, 2);
+      triggerMorph('death');
       return;
     }
 
@@ -528,21 +582,27 @@ const snake = {
     // eat food
     const fi = this.food.findIndex(f=>f.x===nx&&f.y===ny);
     if (fi !== -1) {
+      const piece = this.food[fi];
       this.food.splice(fi,1);
+      if (piece.isMeal) {
+        this.mealsEaten++;
+        score += 30;
+        spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#a78bfa', 12);
+        if (this.mealsEaten >= this.mealsNeeded) {
+          spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#fff', 22);
+          triggerMorph('objective');
+          return;
+        }
+      } else {
+        score += 15;
+        spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#fbbf24', 6);
+      }
       this.spawnFood();
-      score += 15;
       ate = true;
-      spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#fbbf24', 6);
-    }
-    // eat special — TRIGGERS MORPH
-    if (this.specialFood && this.specialFood.x===nx && this.specialFood.y===ny) {
-      score += 50;
-      spawnParticles(this.fieldX + nx*this.cellSize, this.fieldY + ny*this.cellSize, '#fff', 20);
-      triggerMorph(1, 2);
-      return;
     }
     if (!ate) this.body.shift();
-    if (this.specialFood) this.specialFood.pulse += 0.1;
+    this.ensureMealsOnField();
+    for (const f of this.food) f.pulse += 0.12;
   },
 
   draw() {
@@ -557,27 +617,32 @@ const snake = {
     ctx.strokeRect(fx, fy, this.fieldW, this.fieldH);
     ctx.globalAlpha = 1;
 
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.mealsEaten + ' / ' + this.mealsNeeded + ' объектов', W() / 2, fy - 10);
+    ctx.textAlign = 'left';
+
     // food
     for (const f of this.food) {
-      ctx.fillStyle = '#ef4444';
-      ctx.shadowColor = '#ef4444';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(fx + f.x*cs + cs/2, fy + f.y*cs + cs/2, cs/2-2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-
-    // special food
-    if (this.specialFood) {
-      const pulse = Math.sin(this.specialFood.pulse) * 3;
-      ctx.fillStyle = '#fff';
-      ctx.shadowColor = '#fff';
-      ctx.shadowBlur = 14 + pulse;
-      ctx.beginPath();
-      ctx.arc(fx + this.specialFood.x*cs + cs/2, fy + this.specialFood.y*cs + cs/2, cs/2+pulse, 0, Math.PI*2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      if (f.isMeal) {
+        const pulse = Math.sin(f.pulse) * 2;
+        ctx.fillStyle = '#e9d5ff';
+        ctx.shadowColor = '#a78bfa';
+        ctx.shadowBlur = 12 + pulse;
+        ctx.beginPath();
+        ctx.arc(fx + f.x*cs + cs/2, fy + f.y*cs + cs/2, cs/2 - 2 + pulse * 0.3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = '#ef4444';
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(fx + f.x*cs + cs/2, fy + f.y*cs + cs/2, cs/2-2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
     }
 
     // snake body
@@ -616,8 +681,10 @@ const arkanoid = {
   brickPad: 5,
   fieldX: 20, fieldY: 60,
   fieldW: 0,
+  bricksJustCleared: false,
 
   init() {
+    this.bricksJustCleared = false;
     this.fieldW = W() - 40;
     this.fieldX = 20;
     this.paddle.x = W()/2 - this.paddle.w/2;
@@ -646,6 +713,12 @@ const arkanoid = {
   },
 
   update() {
+    if (this.bricksJustCleared && morphing) return;
+    if (this.bricksJustCleared && !morphing) {
+      this.bricksJustCleared = false;
+      return;
+    }
+
     // paddle movement
     if (keys['ArrowLeft']) this.paddle.x = Math.max(this.fieldX, this.paddle.x - this.paddle.speed);
     if (keys['ArrowRight']) this.paddle.x = Math.min(this.fieldX + this.fieldW - this.paddle.w, this.paddle.x + this.paddle.speed);
@@ -661,12 +734,8 @@ const arkanoid = {
     // ball lost
     if (this.ball.y > H() + 30) {
       spawnParticles(this.ball.x, H()-50, COLORS[2], 16);
-      this.ball.x = W()/2;
-      this.ball.y = this.paddle.y - 20;
-      const angle = -Math.PI/2 + (Math.random()-0.5)*0.8;
-      const spd = 5 + cycle * 0.5;
-      this.ball.vx = Math.cos(angle) * spd;
-      this.ball.vy = Math.sin(angle) * spd;
+      triggerMorph('death');
+      return;
     }
 
     // paddle collision
@@ -699,19 +768,15 @@ const arkanoid = {
         b.hp--;
         score += 10;
         spawnParticles(b.x + b.w/2, b.y + b.h/2, COLORS[2], 6);
-        if (b.special) {
-          score += 50;
-          spawnParticles(b.x+b.w/2, b.y+b.h/2, '#fff', 20);
-          triggerMorph(2, 3);
-          return;
-        }
+        if (b.special) score += 25;
         if (b.hp <= 0) this.bricks.splice(i, 1);
       }
     }
 
-    // all bricks gone
     if (this.bricks.length === 0) {
-      triggerMorph(2, 3);
+      spawnParticles(W()/2, this.fieldY + 60, '#fff', 24);
+      this.bricksJustCleared = true;
+      triggerMorph('objective');
     }
 
     score += 0.01;
@@ -839,7 +904,7 @@ const shooter = {
       for (const bb of this.boss.bullets) {
         if (Math.abs(bb.x - (this.ship.x+15)) < 20 && Math.abs(bb.y - (this.ship.y+20)) < 25) {
           spawnParticles(this.ship.x+15, this.ship.y+20, COLORS[3], 20);
-          triggerMorph(3, 4);
+          triggerMorph('death');
           return;
         }
       }
@@ -858,7 +923,7 @@ const shooter = {
           if (this.boss.hp <= 0) {
             spawnParticles(this.boss.x+40, this.boss.y+30, '#fff', 30);
             score += 200;
-            triggerMorph(3, 4);
+            triggerMorph('objective');
             return;
           }
           continue;
@@ -888,7 +953,7 @@ const shooter = {
       if (e.x + e.w > this.ship.x && e.x < this.ship.x + this.ship.w &&
           e.y + e.h > this.ship.y && e.y < this.ship.y + this.ship.h) {
         spawnParticles(this.ship.x+15, this.ship.y+20, COLORS[3], 20);
-        triggerMorph(3, 4);
+        triggerMorph('death');
         return;
       }
     }
@@ -977,6 +1042,8 @@ const shooter = {
 const flappy = {
   bird: {x:0,y:0,vy:0,r:14,angle:0},
   pipes: [],
+  pipesPassed: 0,
+  pipesNeeded: 6,
   pipeW: 52,
   gap: 160,
   pipeSpeed: 3,
@@ -996,6 +1063,8 @@ const flappy = {
     this.pipeSpeed = 3 + cycle * 0.4;
     this.gap = Math.max(110, 160 - cycle * 10);
     this.jumped = false;
+    this.pipesPassed = 0;
+    this.pipesNeeded = 5 + Math.floor(cycle * 1.2);
   },
 
   spawnPipe() {
@@ -1025,7 +1094,7 @@ const flappy = {
 
     if (this.bird.y - this.bird.r < 0 || this.bird.y + this.bird.r > H() - 60) {
       spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
-      triggerMorph(4, 0); // back to jumper! cycle++
+      triggerMorph('death');
       return;
     }
 
@@ -1040,14 +1109,20 @@ const flappy = {
       // score
       if (!p.passed && p.x + this.pipeW < this.bird.x) {
         p.passed = true;
+        this.pipesPassed++;
         score += 20;
         spawnParticles(this.bird.x, this.bird.y, '#fbbf24', 4);
+        if (this.pipesPassed >= this.pipesNeeded) {
+          spawnParticles(this.bird.x, this.bird.y, '#fff', 28);
+          triggerMorph('objective');
+          return;
+        }
       }
       // collision
       if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + this.pipeW) {
         if (this.bird.y - this.bird.r < p.topH || this.bird.y + this.bird.r > p.botY) {
           spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
-          triggerMorph(4, 0);
+          triggerMorph('death');
           return;
         }
       }
@@ -1075,8 +1150,11 @@ const flappy = {
       ctx.fillRect(p.x - 4, p.botY, this.pipeW + 8, 16);
       ctx.globalAlpha = 1;
     }
-    // ground line
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.pipesPassed + ' / ' + this.pipesNeeded + ' препятствий', W()/2, 52);
+    ctx.textAlign = 'left';
     ctx.fillRect(0, H()-60, W(), 60);
 
     // bird
@@ -1117,48 +1195,219 @@ const flappy = {
   }
 };
 
-// ─── MORPH TRANSITION ─────────────────────────────────────────────────────────
-let morphAnimFrame = 0;
-let onMorphComplete = null;
+let morphStartReal = 0;
 
-function triggerMorph(from, to) {
+function easeMorphT(raw, style) {
+  if (style === 'flash') return raw < 0.42 ? 0 : 1;
+  if (style === 'creep') return Math.pow(Math.min(1, Math.max(0, raw)), 0.38);
+  const t = Math.min(1, Math.max(0, raw));
+  return t * t * (3 - 2 * t);
+}
+
+function captureMorphSnapshot(mode) {
+  switch (mode) {
+    case 0:
+      return {
+        mode: 0,
+        px: jumper.x + jumper.w / 2,
+        py: jumper.y + jumper.h / 2,
+        w: jumper.w,
+        h: jumper.h
+      };
+    case 1: {
+      const h = snake.body[snake.body.length - 1];
+      const cs = snake.cellSize;
+      return {
+        mode: 1,
+        px: snake.fieldX + h.x * cs + cs / 2,
+        py: snake.fieldY + h.y * cs + cs / 2,
+        segs: snake.body.map(b => ({
+          x: snake.fieldX + b.x * cs + cs / 2,
+          y: snake.fieldY + b.y * cs + cs / 2
+        })),
+        cs
+      };
+    }
+    case 2:
+      return {
+        mode: 2,
+        px: arkanoid.ball.x,
+        py: arkanoid.ball.y,
+        r: arkanoid.ball.r,
+        paddleY: arkanoid.paddle.y,
+        paddleW: arkanoid.paddle.w,
+        paddleH: arkanoid.paddle.h,
+        paddleX: arkanoid.paddle.x
+      };
+    case 3:
+      return {
+        mode: 3,
+        px: shooter.ship.x + shooter.ship.w / 2,
+        py: shooter.ship.y + shooter.ship.h / 2,
+        w: shooter.ship.w,
+        h: shooter.ship.h
+      };
+    case 4:
+      return {
+        mode: 4,
+        px: flappy.bird.x,
+        py: flappy.bird.y,
+        r: flappy.bird.r,
+        ang: flappy.bird.angle
+      };
+    default:
+      return { mode: 0, px: W() / 2, py: H() / 2, w: 36, h: 36 };
+  }
+}
+
+function drawMorphShapeAt(snap, alpha, uMorph) {
+  if (alpha <= 0.01) return;
+  const c = COLORS[snap.mode];
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (snap.mode === 0) {
+    const s = 1 + Math.sin(uMorph * Math.PI) * 0.15;
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 20;
+    ctx.fillRect(snap.px - (snap.w * s) / 2, snap.py - (snap.h * s) / 2, snap.w * s, snap.h * s);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(snap.px - 10, snap.py - 8, 6, 7);
+    ctx.fillRect(snap.px + 2, snap.py - 8, 6, 7);
+  } else if (snap.mode === 1) {
+    const segs = snap.segs;
+    if (!segs || !segs.length) return;
+    ctx.strokeStyle = c;
+    ctx.lineWidth = snap.cs * 0.85;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(segs[0].x, segs[0].y);
+    for (let i = 1; i < segs.length; i++) ctx.lineTo(segs[i].x, segs[i].y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    const head = segs[segs.length - 1];
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(head.x - 5, head.y - 5, 4, 4);
+    ctx.fillRect(head.x + 1, head.y - 5, 4, 4);
+  } else if (snap.mode === 2) {
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 14;
+    ctx.fillRect(snap.paddleX, snap.paddleY, snap.paddleW, snap.paddleH);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(snap.px, snap.py, snap.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  } else if (snap.mode === 3) {
+    const x = snap.px - snap.w / 2;
+    const y = snap.py - snap.h / 2;
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.moveTo(snap.px, y);
+    ctx.lineTo(x + snap.w, y + snap.h);
+    ctx.lineTo(x + snap.w * 0.62, y + snap.h * 0.72);
+    ctx.lineTo(x + snap.w * 0.38, y + snap.h * 0.72);
+    ctx.lineTo(x, y + snap.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  } else if (snap.mode === 4) {
+    ctx.save();
+    ctx.translate(snap.px, snap.py);
+    ctx.rotate(snap.ang || 0);
+    ctx.fillStyle = c;
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, snap.r, snap.r * 0.75, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(12, -1);
+    ctx.lineTo(18, 2);
+    ctx.lineTo(12, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawMorphTransition(uRaw) {
+  const u = easeMorphT(uRaw, morphStyle);
+  const ax = morphSnapshotFrom.px + (morphSnapshotTo.px - morphSnapshotFrom.px) * uRaw;
+  const ay = morphSnapshotFrom.py + (morphSnapshotTo.py - morphSnapshotFrom.py) * uRaw;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(ax, ay, 0, ax, ay, 120 + uRaw * 80);
+  g.addColorStop(0, COLORS[morphFrom] + '55');
+  g.addColorStop(0.5, COLORS[morphTo] + '33');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W(), H());
+  ctx.restore();
+
+  const gooW = 40 + (1 - u) * 60 + Math.sin(uRaw * Math.PI * 3) * 12;
+  const gooH = 40 + u * 90 + Math.cos(uRaw * Math.PI * 2) * 20;
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(uRaw * Math.PI * 0.6 * (morphFrom % 2 === 0 ? 1 : -1));
+  ctx.globalAlpha = morphStyle === 'flash' ? 0.35 : 0.22;
+  ctx.fillStyle = COLORS[morphTo];
+  ctx.beginPath();
+  ctx.ellipse(0, 0, gooW, gooH * 0.45, uRaw * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  const aFrom = morphStyle === 'flash' ? (uRaw < 0.5 ? 0.95 : 0.08) : (1 - u) * 0.92;
+  const aTo = morphStyle === 'flash' ? (uRaw < 0.5 ? 0.1 : 0.95) : u * 0.92;
+  drawMorphShapeAt(morphSnapshotFrom, aFrom, uRaw);
+  drawMorphShapeAt(morphSnapshotTo, aTo, uRaw);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,' + (0.15 + uRaw * 0.25) + ')';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    const phase = uRaw * (80 + i * 40) + i;
+    ctx.beginPath();
+    ctx.arc(ax, ay, 30 + phase % 100, 0, Math.PI * 1.5);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  const tag = lastMorphReason === 'death' ? 'ПЕРЕРОЖДЕНИЕ' : 'МЕТАМОРФОЗ';
+  ctx.fillText(tag, W() / 2, H() / 2 + 120);
+  ctx.textAlign = 'left';
+}
+
+function triggerMorph(reason) {
   if (morphing) return;
   morphing = true;
-  morphFrom = from;
-  morphTo = to;
+  morphFrom = gameMode;
+  lastMorphReason = reason;
+  const pick = pickMorphStyle(reason);
+  morphStyle = pick.style;
+  morphDuration = pick.ms;
+  morphSnapshotFrom = captureMorphSnapshot(gameMode);
+  advanceStageAfterMorph();
+  initCurrentGame();
+  morphTo = gameMode;
+  morphSnapshotTo = captureMorphSnapshot(gameMode);
+  morphStartReal = performance.now();
   morphT = 0;
-  morphAnimFrame = 0;
-  onMorphComplete = () => {
-    gameMode = to;
-    if (to === 0) cycle++;
-    initCurrentGame();
-  };
-
-  const overlay = document.getElementById('transitionOverlay');
-  const names = ['ПРЫЖОК → ЗМЕЙКА','ЗМЕЙКА → АРКАНОИД','АРКАНОИД → ШУТЕР','ШУТЕР → FLAPPY','FLAPPY → ПРЫЖОК'];
-  const idx = from;
-  overlay.textContent = names[idx] || '...';
-
-  // fade in
-  let fadeIn = 0;
-  const doFade = () => {
-    fadeIn += 0.06;
-    overlay.style.opacity = Math.min(fadeIn, 1);
-    if (fadeIn < 1) requestAnimationFrame(doFade);
-    else setTimeout(() => {
-      onMorphComplete();
-      // fade out
-      let fadeOut = 1;
-      const doFadeOut = () => {
-        fadeOut -= 0.06;
-        overlay.style.opacity = Math.max(fadeOut, 0);
-        if (fadeOut > 0) requestAnimationFrame(doFadeOut);
-        else { morphing = false; overlay.style.opacity = 0; }
-      };
-      requestAnimationFrame(doFadeOut);
-    }, 600);
-  };
-  requestAnimationFrame(doFade);
 }
 
 // ─── GAME MANAGEMENT ──────────────────────────────────────────────────────────
@@ -1196,14 +1445,20 @@ function drawCurrent() {
 }
 
 // ─── MAIN LOOP ────────────────────────────────────────────────────────────────
-let lastTime = 0;
 function loop(ts) {
   if (!running) return;
   requestAnimationFrame(loop);
 
   drawBg();
+  if (morphing) {
+    morphT = Math.min(1, (performance.now() - morphStartReal) / morphDuration);
+  }
   updateCurrent();
   drawCurrent();
+  if (morphing) {
+    drawMorphTransition(morphT);
+    if (morphT >= 1) morphing = false;
+  }
   updateParticles();
   drawParticles();
 
@@ -1222,9 +1477,12 @@ function loop(ts) {
 function startGame() {
   document.getElementById('overlay').style.display = 'none';
   running = true;
+  morphing = false;
   score = 0;
   cycle = 0;
-  gameMode = 0;
+  stageIndex = 0;
+  shuffleMidStages();
+  syncGameModeFromStage();
   initStars();
   initCurrentGame();
   requestAnimationFrame(loop);
