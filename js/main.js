@@ -38,7 +38,6 @@ function updateBestLine() {
   }
   const parts = [];
   if (G.bestScore > 0) parts.push('рекорд ' + G.bestScore);
-  parts.push('цикл ' + G.cycle);
   parts.push('шагов ' + G.runMorphCount);
   if (G.runDeathCount > 0) parts.push('угасаний ' + G.runDeathCount);
   el.textContent = parts.join(' · ');
@@ -47,14 +46,7 @@ function updateBestLine() {
 function resize() {
   G.canvas.width = window.innerWidth;
   G.canvas.height = window.innerHeight;
-  if (G.running && !G.morphing && !G.paused) {
-    cancelAnimationFrame(G.rafId);
-    G.rafId = requestAnimationFrame(loop);
-    initCurrentGame();
-  } else if (G.running && !G.morphing && G.paused) {
-    cancelAnimationFrame(G.rafId);
-    G.rafId = requestAnimationFrame(loop);
-  }
+  if (G.running && !G.morphing && !G.paused) initCurrentGame();
 }
 
 function updateCurrent() {

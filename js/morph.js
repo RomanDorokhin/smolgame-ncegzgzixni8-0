@@ -89,7 +89,10 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     c.fillRect(snap.px + 2, snap.py - 8, 6, 7);
   } else if (snap.mode === 1) {
     const segs = snap.segs;
-    if (!segs || !segs.length) return;
+    if (!segs || !segs.length) {
+      c.restore();
+      return;
+    }
     c.strokeStyle = col;
     c.lineWidth = snap.cs * 0.85;
     c.lineCap = 'round';

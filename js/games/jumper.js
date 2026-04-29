@@ -89,11 +89,6 @@ export const jumper = {
       if (p.hasBeacon) p.beaconX -= this.scrollSpeed;
     }
     this.runDistance += this.scrollSpeed;
-    if (this.runDistance >= this.runThreshold) {
-      spawnParticles(this.x + this.w / 2, this.y + this.h / 2, '#a78bfa', 18);
-      this.tryObjectiveMorph();
-      return;
-    }
 
     this.platforms = this.platforms.filter(p => p.x + p.w > -100);
     while (this.platforms.length < 10) {
@@ -131,6 +126,12 @@ export const jumper = {
           return;
         }
       }
+    }
+
+    if (this.runDistance >= this.runThreshold) {
+      spawnParticles(this.x + this.w / 2, this.y + this.h / 2, '#a78bfa', 18);
+      this.tryObjectiveMorph();
+      return;
     }
 
     if (this.y > G.H() + 100) {
