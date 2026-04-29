@@ -24,11 +24,19 @@ export const G = {
   morphStartReal: 0,
 
   running: false,
+  paused: false,
+  rafId: 0,
   particles: [],
   bgStars: [],
 
   keys: {},
   touchJump: false,
+
+  /** Метаморфоз за текущий забег (глубина «жизни»). */
+  runMorphCount: 0,
+  /** Сколько раз смерть в форме стала перерождением. */
+  runDeathCount: 0,
+  bestScore: 0,
 
   MODES,
   COLORS,

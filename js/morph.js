@@ -203,11 +203,25 @@ export function drawMorphTransition(uRaw) {
   const tag = G.lastMorphReason === 'death' ? 'ПЕРЕРОЖДЕНИЕ' : 'МЕТАМОРФОЗ';
   c.fillText(tag, G.W() / 2, G.H() / 2 + 120);
   c.textAlign = 'left';
+
+  c.save();
+  const cx = G.W() / 2, cy = G.H() / 2;
+  const maxR = Math.hypot(cx, cy) * 1.15;
+  const vg = c.createRadialGradient(cx, cy, maxR * (0.35 + uRaw * 0.2), cx, cy, maxR);
+  const edge = 0.25 + uRaw * 0.35;
+  vg.addColorStop(0, 'transparent');
+  vg.addColorStop(0.55, `rgba(0,0,0,${edge * 0.35})`);
+  vg.addColorStop(1, `rgba(0,0,0,${edge})`);
+  c.fillStyle = vg;
+  c.fillRect(0, 0, G.W(), G.H());
+  c.restore();
 }
 
 function triggerMorph(reason) {
   if (G.morphing) return;
   G.morphing = true;
+  G.runMorphCount++;
+  if (reason === 'death') G.runDeathCount++;
   G.morphFrom = G.gameMode;
   G.lastMorphReason = reason;
   const pick = pickMorphStyle(reason);

@@ -10,13 +10,18 @@
 
 <div id="ui">
   <span id="gameLabel">—</span>
-  <span id="score">0</span>
+  <div id="scoreBlock">
+    <span id="score">0</span>
+    <div id="bestLine" aria-live="polite"></div>
+  </div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
+<div id="pauseHint">пауза · esc</div>
+
 <div id="controls">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+  <div class="ctrl-stack">
     <div class="ctrl-row">
       <div class="ctrl-btn" id="btnUp">▲</div>
     </div>
@@ -35,8 +40,6 @@
   смерть в форме — перерождение в следующую · метаморфоз на экране</p>
   <button type="button" id="startBtn">[ начать ]</button>
 </div>
-
-<div id="transitionOverlay" aria-hidden="true"></div>
 
 <script type="module" src="js/main.js"></script>
 </body>

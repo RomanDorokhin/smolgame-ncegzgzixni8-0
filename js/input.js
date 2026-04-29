@@ -12,6 +12,10 @@ export function bindInput(canvas) {
     G.keys[e.code] = false;
     G.touchJump = false;
   });
+  window.addEventListener('blur', () => {
+    for (const k of Object.keys(G.keys)) G.keys[k] = false;
+    G.touchJump = false;
+  });
 
   function setupBtn(id, code) {
     const el = document.getElementById(id);
