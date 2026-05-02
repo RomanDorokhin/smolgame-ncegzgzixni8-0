@@ -56,10 +56,10 @@ export function drawMorphTransition(uRaw) {
   drawMorphShapeAt(snapFrom, aFrom, uRaw);
 
   // Hybrid moments
+  const ax = snapFrom.px + (snapTo.px - snapFrom.px) * uRaw;
+  const ay = snapFrom.py + (snapTo.py - snapFrom.py) * uRaw;
+
   if (uRaw > 0.2 && uRaw < 0.8) {
-    const ax = snapFrom.px + (snapTo.px - snapFrom.px) * uRaw;
-    const ay = snapFrom.py + (snapTo.py - snapFrom.py) * uRaw;
-    
     if (G.morphFrom === 0 && G.morphTo === 1) {
       // Jumper -> Snake: trail
       c.save();
