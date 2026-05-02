@@ -111,6 +111,11 @@ function loop() {
   if (!G.running) return;
   G.rafId = requestAnimationFrame(loop);
 
+  const c = G.ctx;
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = 'source-over';
+  c.shadowBlur = 0;
+
   drawBg();
   if (G.morphing) {
     G.morphT = Math.min(1, (performance.now() - G.morphStartReal) / G.morphDuration);
@@ -118,10 +123,15 @@ function loop() {
   updateCurrent();
   updateChaos();
   drawCurrent();
+  
   if (G.morphing) {
-    G.morphT = Math.min(1, (performance.now() - G.morphStartReal) / G.morphDuration);
-    drawMorphTransition(G.morphT);
-    // Safety: force end morphing if it's finished or stuck
+    try {
+      drawMorphTransition(G.morphT);
+    } catch (e) {
+      console.error("Morph transition error:", e);
+      G.morphing = false; // Emergency stop
+    }
+    
     if (G.morphT >= 1 || (performance.now() - G.morphStartReal > 5000)) {
       G.morphing = false;
       G.morphT = 1;

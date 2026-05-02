@@ -1,6 +1,6 @@
 import { MODES, COLORS } from './constants.js';
 
-export const G = {
+const localG = {
   canvas: null,
   ctx: null,
   W() { return this.canvas?.width ?? 0; },
@@ -70,6 +70,12 @@ export const G = {
   MODES,
   COLORS,
 };
+
+if (typeof window !== 'undefined') {
+  if (!window._G_SINGLETON) window._G_SINGLETON = localG;
+}
+
+export const G = typeof window !== 'undefined' ? window._G_SINGLETON : localG;
 
 export function resetCarryover() {
   G.carryover = {

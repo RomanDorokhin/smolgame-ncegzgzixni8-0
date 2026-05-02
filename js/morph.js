@@ -32,8 +32,8 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
 export function drawMorphTransition(uRaw) {
   const c = G.ctx;
   const u = easeMorphT(uRaw, G.morphStyle);
-  const snapFrom = captureMorphSnapshot(G.morphFrom);
-  const snapTo = captureMorphSnapshot(G.morphTo);
+  const snapFrom = G.morphSnapshotFrom || { mode: 0, px: G.W()/2, py: G.H()/2 };
+  const snapTo = G.morphSnapshotTo || { mode: 0, px: G.W()/2, py: G.H()/2 };
 
   const aFrom = G.morphStyle === 'flash' ? (uRaw < 0.5 ? 0.95 : 0.08) : (1 - u) * 0.92;
   const aTo = G.morphStyle === 'flash' ? (uRaw < 0.5 ? 0.1 : 0.95) : u * 0.92;

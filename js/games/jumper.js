@@ -172,7 +172,7 @@ export const jumper = {
   },
 
   draw(skipPlayer = false) {
-    const c = ctx();
+    const c = G.ctx;
     const COL = COLORS[0];
     for (const p of this.platforms) {
       if (p.isGap) continue;
