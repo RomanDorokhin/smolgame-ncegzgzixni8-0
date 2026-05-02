@@ -1,7 +1,10 @@
 import { G } from './gameState.js';
 
 export function bindInput(canvas) {
-  if (!G) return;
+  if (!G || !canvas) {
+    console.error("Input binding failed: G or canvas missing");
+    return;
+  }
 
   // Key handlers
   window.addEventListener('keydown', e => { G.keys[e.code] = true; });
@@ -25,35 +28,37 @@ export function bindInput(canvas) {
     }
   };
 
-  canvas.addEventListener('touchstart', handleStart, { passive: false });
-  window.addEventListener('mousedown', handleStart);
+  const handleEnd = () => {
+    G.touchJump = false;
+    if (G.gameMode === 2 || G.gameMode === 3) {
+      G.keys['ArrowLeft'] = false;
+      G.keys['ArrowRight'] = false;
+    }
+  };
 
+  canvas.addEventListener('touchstart', handleStart, { passive: false });
   canvas.addEventListener('touchmove', e => {
+    if (G.paused || !G.running) return;
     e.preventDefault();
     const t = e.touches[0];
     const dx = t.clientX - touchStartX;
     const dy = t.clientY - touchStartY;
     
-    // Swipe for Snake (1)
     if (G.gameMode === 1) {
       const threshold = 30;
       if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
         if (Math.abs(dx) > Math.abs(dy)) {
           if (dx > 0) G.keys['ArrowRight'] = true; else G.keys['ArrowLeft'] = true;
-          // Reset vertical keys
           G.keys['ArrowUp'] = false; G.keys['ArrowDown'] = false;
         } else {
           if (dy > 0) G.keys['ArrowDown'] = true; else G.keys['ArrowUp'] = true;
-          // Reset horizontal keys
           G.keys['ArrowLeft'] = false; G.keys['ArrowRight'] = false;
         }
-        // Reset start position for continuous swiping
         touchStartX = t.clientX;
         touchStartY = t.clientY;
       }
     }
 
-    // Slide for Arkanoid (2) or Shooter (3)
     if (G.gameMode === 2 || G.gameMode === 3) {
       const moveX = t.clientX - lastTouchX;
       if (moveX > 2) { G.keys['ArrowRight'] = true; G.keys['ArrowLeft'] = false; }
@@ -63,35 +68,20 @@ export function bindInput(canvas) {
     }
   }, { passive: false });
 
-  const handleEnd = () => {
-    G.touchJump = false;
-    if (G.gameMode === 2 || G.gameMode === 3) {
-      G.keys['ArrowLeft'] = false;
-      G.keys['ArrowRight'] = false;
-    }
-  };
-
   canvas.addEventListener('touchend', handleEnd);
+  
+  // Desktop fallbacks
+  window.addEventListener('mousedown', handleStart);
   window.addEventListener('mouseup', handleEnd);
 
-  // D-pad button support (specifically for Snake)
+  // D-pad button support
   function setupBtn(id, code) {
     const el = document.getElementById(id);
     if (!el) return;
-    const press = (e) => {
-      e.preventDefault();
-      G.keys[code] = true;
-      if (code === 'ArrowUp') G.touchJump = true;
-    };
-    const release = (e) => {
-      e.preventDefault();
-      G.keys[code] = false;
-      if (code === 'ArrowUp') G.touchJump = false;
-    };
-    el.addEventListener('touchstart', press, { passive: false });
-    el.addEventListener('touchend', release, { passive: false });
-    el.addEventListener('mousedown', press);
-    el.addEventListener('mouseup', release);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); G.keys[code] = true; if(code==='ArrowUp') G.touchJump=true; }, { passive: false });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); G.keys[code] = false; G.touchJump=false; }, { passive: false });
+    el.addEventListener('mousedown', () => { G.keys[code] = true; if(code==='ArrowUp') G.touchJump=true; });
+    el.addEventListener('mouseup', () => { G.keys[code] = false; G.touchJump=false; });
   }
   setupBtn('btnUp', 'ArrowUp');
   setupBtn('btnDown', 'ArrowDown');
