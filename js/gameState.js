@@ -37,6 +37,10 @@ const localG = {
   /** Сколько раз смерть в форме стала перерождением. */
   runDeathCount: 0,
   bestScore: 0,
+  
+  runStartTime: 0,
+  isVictory: false,
+  isEndless: false,
 
   carryover: {
     jumperCrystals: 0,
@@ -105,8 +109,13 @@ export function advanceStageAfterMorph() {
   G.stageIndex = (G.stageIndex + 1) % 5;
   if (G.stageIndex === 0) {
     G.cycle++;
-    // We keep fixed order now: [0, 1, 2, 3, 4]
     resetCarryover();
+    
+    // Victory check: If 5 cycles are completed (Cycle goes from 4 to 5)
+    if (G.cycle === 5 && !G.isEndless) {
+      if (G.showVictory) G.showVictory();
+      return;
+    }
   }
   syncGameModeFromStage();
 }

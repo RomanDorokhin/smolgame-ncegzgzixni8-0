@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>METAMORPHOSIS</title>
 <link rel="stylesheet" href="css/game.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
@@ -45,6 +46,20 @@
   Кристаллы → позвонки · Еда → броня · Блоки → импульс · Осколки → свет · Душа → точка<br>
   смерть — это не конец, а перерождение в следующую форму</p>
   <button type="button" id="startBtn">[ начать ]</button>
+</div>
+
+<div id="victoryOverlay" class="hidden">
+  <div class="v-glitch" data-text="ТРАНСЦЕНДЕНТНОСТЬ">ТРАНСЦЕНДЕНТНОСТЬ</div>
+  <p>Цикл разорван. Вы больше не форма. Вы — чистый свет.</p>
+  <div id="statsBlock">
+    <div class="stat-row"><span>ВРЕМЯ:</span> <span id="vTime">00:00</span></div>
+    <div class="stat-row"><span>УГАСАНИЙ:</span> <span id="vDeaths">0</span></div>
+    <div class="stat-row"><span>МОРФОВ:</span> <span id="vMorphs">0</span></div>
+  </div>
+  <div class="v-buttons">
+    <button type="button" id="shareBtn">[ ПОВЕДАТЬ МИРУ ]</button>
+    <button type="button" id="endlessBtn">[ ВЕЧНОЕ ВОСХОЖДЕНИЕ ]</button>
+  </div>
 </div>
 
 <script type="module" src="js/main.js"></script>

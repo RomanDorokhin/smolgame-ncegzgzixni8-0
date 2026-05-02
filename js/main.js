@@ -15,6 +15,12 @@ const LS_BEST = 'metamorphosis_best_v1';
 G.canvas = document.getElementById('gameCanvas');
 G.ctx = G.canvas.getContext('2d');
 
+// Telegram Init
+if (window.Telegram && window.Telegram.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+}
+
 function loadBestScore() {
   try {
     const v = localStorage.getItem(LS_BEST);
@@ -264,6 +270,47 @@ function startGame() {
   G.rafId = requestAnimationFrame(loop);
 }
 
+function showVictory() {
+  G.running = false;
+  G.isVictory = true;
+  cancelAnimationFrame(G.rafId);
+  
+  const overlay = document.getElementById('victoryOverlay');
+  const vTime = document.getElementById('vTime');
+  const vDeaths = document.getElementById('vDeaths');
+  const vMorphs = document.getElementById('vMorphs');
+  
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    
+    // Format time
+    const dur = Math.floor((performance.now() - G.runStartTime) / 1000);
+    const m = Math.floor(dur / 60).toString().padStart(2, '0');
+    const s = (dur % 60).toString().padStart(2, '0');
+    
+    vTime.textContent = `${m}:${s}`;
+    vDeaths.textContent = G.runDeathCount;
+    vMorphs.textContent = G.runMorphCount;
+  }
+}
+
+function shareScore() {
+  if (!window.Telegram || !window.Telegram.WebApp) return;
+  const dur = Math.floor((performance.now() - G.runStartTime) / 1000);
+  const text = `Я ВЫРВАЛСЯ ИЗ ЦИКЛА МЕТАМОРФОЗЫ! 🧬✨\nВремя: ${Math.floor(dur/60)}м ${dur%60}с\nСмертей: ${G.runDeathCount}\nПопробуй превзойти мой результат! 🔥`;
+  const url = 'https://t.me/share/url?url=' + encodeURIComponent('https://romandorohin.github.io/metamorphosis_game/') + '&text=' + encodeURIComponent(text);
+  window.Telegram.WebApp.openTelegramLink(url);
+}
+
+function startEndless() {
+  G.isVictory = false;
+  G.isEndless = true;
+  const overlay = document.getElementById('victoryOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  G.running = true;
+  loop();
+}
+
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   const w = window.innerWidth;
@@ -292,3 +339,26 @@ document.addEventListener('touchstart', e => {
 }, { passive: false });
 
 document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('shareBtn').addEventListener('click', shareScore);
+document.getElementById('endlessBtn').addEventListener('click', startEndless);
+
+function startGame() {
+  G.score = 0;
+  G.cycle = 0;
+  G.stageIndex = 0;
+  G.gameMode = G.stageOrder[0];
+  G.runMorphCount = 0;
+  G.runDeathCount = 0;
+  G.runStartTime = performance.now();
+  G.isVictory = false;
+  G.isEndless = false;
+  resetCarryover();
+  
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('victoryOverlay').classList.add('hidden');
+  G.running = true;
+  initCurrentGame();
+  loop();
+}
+
+G.showVictory = showVictory;
