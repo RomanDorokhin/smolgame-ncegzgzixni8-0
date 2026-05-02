@@ -51,11 +51,19 @@ export const arkanoid = {
       return;
     }
 
-    if (G.keys['ArrowLeft']) this.paddle.x = Math.max(this.fieldX, this.paddle.x - this.paddle.speed);
-    if (G.keys['ArrowRight']) this.paddle.x = Math.min(this.fieldX + this.fieldW - this.paddle.w, this.paddle.x + this.paddle.speed);
+    const mod = G.currentMod;
+    let left = G.keys['ArrowLeft'];
+    let right = G.keys['ArrowRight'];
+    if (mod.name === 'ИНВЕРСИЯ') [left, right] = [right, left];
 
-    this.ball.x += this.ball.vx;
-    this.ball.y += this.ball.vy;
+    if (left) this.paddle.x = Math.max(this.fieldX, this.paddle.x - this.paddle.speed);
+    if (right) this.paddle.x = Math.min(this.fieldX + this.fieldW - this.paddle.w, this.paddle.x + this.paddle.speed);
+
+    let spdMult = 1;
+    if (mod.name === 'УСКОРЕНИЕ') spdMult = 1.35;
+
+    this.ball.x += this.ball.vx * spdMult;
+    this.ball.y += this.ball.vy * spdMult;
 
     if (this.ball.x - this.ball.r < this.fieldX) { this.ball.x = this.fieldX + this.ball.r; this.ball.vx *= -1; }
     if (this.ball.x + this.ball.r > this.fieldX + this.fieldW) { this.ball.x = this.fieldX + this.fieldW - this.ball.r; this.ball.vx *= -1; }
@@ -94,7 +102,12 @@ export const arkanoid = {
         b.hp--;
         G.score += 10;
         spawnParticles(b.x + b.w / 2, b.y + b.h / 2, COLORS[2], 6);
-        if (b.special) G.score += 25;
+        if (b.special) {
+          G.score += 100;
+          this.ball.vx *= 1.2;
+          this.ball.vy *= 1.2;
+          spawnParticles(b.x + b.w / 2, b.y + b.h / 2, '#fff', 20);
+        }
         if (b.hp <= 0) this.bricks.splice(i, 1);
       }
     }
@@ -109,7 +122,7 @@ export const arkanoid = {
     G.score += 0.01;
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const COL = COLORS[2];
     for (const b of this.bricks) {
@@ -121,6 +134,9 @@ export const arkanoid = {
       c.globalAlpha = 1;
       c.shadowBlur = 0;
     }
+    
+    if (skipPlayer) return;
+
     c.fillStyle = COL;
     c.shadowColor = COL;
     c.shadowBlur = 10;

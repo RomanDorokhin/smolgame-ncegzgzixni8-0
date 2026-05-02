@@ -45,6 +45,18 @@ export const G = {
     shooterKills: 0,
   },
 
+  modifiers: [
+    { name: 'НОРМА', desc: 'Обычный темп' },
+    { name: 'УСКОРЕНИЕ', desc: 'Скорость +25%' },
+    { name: 'ЛЕГКОСТЬ', desc: 'Гравитация -30%' },
+    { name: 'ИНВЕРСИЯ', desc: 'Зеркальное управление' },
+    { name: 'ХАОС', desc: 'Случайный морфинг' }
+  ],
+  
+  get currentMod() {
+    return this.modifiers[Math.min(this.cycle, this.modifiers.length - 1)];
+  },
+
   MODES,
   COLORS,
 };

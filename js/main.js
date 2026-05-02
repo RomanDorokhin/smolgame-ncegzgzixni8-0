@@ -50,8 +50,15 @@ function resize() {
 }
 
 function updateCurrent() {
-  if (G.morphing || G.paused) return;
-  switch (G.gameMode) {
+  if (G.paused) return;
+  
+  let mode = G.gameMode;
+  if (G.morphing) {
+    // During morphing, we transition control from morphFrom to morphTo
+    mode = G.morphT < 0.5 ? G.morphFrom : G.morphTo;
+  }
+
+  switch (mode) {
     case 0: jumper.update(); break;
     case 1: snake.update(); break;
     case 2: arkanoid.update(); break;
@@ -60,8 +67,45 @@ function updateCurrent() {
   }
 }
 
+let chaosTimer = 0;
+async function updateChaos() {
+  if (G.currentMod.name === 'ХАОС' && !G.morphing && G.running) {
+    chaosTimer++;
+    if (chaosTimer > 60 * 15) { // Every 15s
+      chaosTimer = 0;
+      const { triggerMorph } = await import('./actions.js');
+      triggerMorph('chaos');
+    }
+  } else {
+    chaosTimer = 0;
+  }
+}
+
 function drawCurrent() {
-  switch (G.gameMode) {
+  if (G.morphing) {
+    // During morphing, morph.js handles drawing the character(s).
+    // But we might want to draw the environment (platforms, food, etc.)
+    // We'll draw BOTH environments with alpha blending
+    const alphaFrom = 1 - G.morphT;
+    const alphaTo = G.morphT;
+
+    G.ctx.save();
+    G.ctx.globalAlpha = alphaFrom;
+    drawEnv(G.morphFrom);
+    G.ctx.restore();
+
+    G.ctx.save();
+    G.ctx.globalAlpha = alphaTo;
+    drawEnv(G.morphTo);
+    G.ctx.restore();
+    return;
+  }
+
+  drawEnv(G.gameMode);
+}
+
+function drawEnv(mode) {
+  switch (mode) {
     case 0: jumper.draw(); break;
     case 1: snake.draw(); break;
     case 2: arkanoid.draw(); break;
@@ -79,6 +123,7 @@ function loop() {
     G.morphT = Math.min(1, (performance.now() - G.morphStartReal) / G.morphDuration);
   }
   updateCurrent();
+  updateChaos();
   drawCurrent();
   if (G.morphing) {
     drawMorphTransition(G.morphT);
@@ -114,6 +159,16 @@ function loop() {
   if (G.carryover.bricksCleared) {
     c.fillText('ЩИТ: АКТИВЕН', 20, yPos);
     yPos += 15;
+  }
+
+  // Modifier display
+  const mod = G.currentMod;
+  if (mod && mod.name !== 'НОРМА') {
+    c.fillStyle = '#f87171';
+    c.font = 'bold 12px Courier New';
+    c.textAlign = 'right';
+    c.fillText(mod.name + ': ' + mod.desc, G.W() - 20, G.H() - 30);
+    c.textAlign = 'left';
   }
 }
 

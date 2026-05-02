@@ -40,11 +40,24 @@ export const shooter = {
   },
 
   update() {
-    const spd = 5;
-    if (G.keys['ArrowLeft']) this.ship.x = Math.max(0, this.ship.x - spd);
-    if (G.keys['ArrowRight']) this.ship.x = Math.min(G.W() - this.ship.w, this.ship.x + spd);
-    if (G.keys['ArrowUp']) this.ship.y = Math.max(G.H() * 0.3, this.ship.y - spd);
-    if (G.keys['ArrowDown']) this.ship.y = Math.min(G.H() - this.ship.h - 80, this.ship.y + spd);
+    const mod = G.currentMod;
+    let spd = 5;
+    if (mod.name === 'УСКОРЕНИЕ') spd = 7;
+    
+    let left = G.keys['ArrowLeft'];
+    let right = G.keys['ArrowRight'];
+    let up = G.keys['ArrowUp'];
+    let down = G.keys['ArrowDown'];
+    
+    if (mod.name === 'ИНВЕРСИЯ') {
+      [left, right] = [right, left];
+      [up, down] = [down, up];
+    }
+
+    if (left) this.ship.x = Math.max(0, this.ship.x - spd);
+    if (right) this.ship.x = Math.min(G.W() - this.ship.w, this.ship.x + spd);
+    if (up) this.ship.y = Math.max(G.H() * 0.3, this.ship.y - spd);
+    if (down) this.ship.y = Math.min(G.H() - this.ship.h - 80, this.ship.y + spd);
 
     this.shootTimer++;
     if (this.shootTimer > Math.max(8 - G.cycle, 4)) {
@@ -149,7 +162,7 @@ export const shooter = {
     G.score += 0.02;
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const COL = COLORS[3];
     for (const b of this.bullets) {
@@ -194,6 +207,18 @@ export const shooter = {
         c.fill();
       }
     }
+    
+    if (skipPlayer) {
+      if (!this.boss) {
+        const pct = Math.min(this.kills / this.killsNeeded, 1);
+        c.fillStyle = 'rgba(255,255,255,0.1)';
+        c.fillRect(G.W() / 2 - 60, 44, 120, 6);
+        c.fillStyle = COL;
+        c.fillRect(G.W() / 2 - 60, 44, 120 * pct, 6);
+      }
+      return;
+    }
+
     c.fillStyle = COL;
     c.shadowColor = COL;
     c.shadowBlur = 16;

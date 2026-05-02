@@ -76,19 +76,31 @@ export const jumper = {
     }
     if (!jumped) this.jumpPressed = false;
 
-    this.vy += 0.55;
+    const mod = G.currentMod;
+    let finalScroll = this.scrollSpeed;
+    if (mod.name === 'УСКОРЕНИЕ') finalScroll *= 1.35;
+    
+    let grav = 0.55;
+    if (mod.name === 'ЛЕГКОСТЬ') grav *= 0.65;
+
+    this.vy += grav;
     this.y += this.vy;
     this.onGround = false;
 
-    if (G.keys['ArrowRight']) this.x = Math.min(G.W() * 0.6, this.x + 4);
-    if (G.keys['ArrowLeft']) this.x = Math.max(30, this.x - 4);
+    let moveDir = 0;
+    if (G.keys['ArrowRight']) moveDir += 1;
+    if (G.keys['ArrowLeft']) moveDir -= 1;
+    if (mod.name === 'ИНВЕРСИЯ') moveDir *= -1;
+
+    if (moveDir > 0) this.x = Math.min(G.W() * 0.6, this.x + 4);
+    if (moveDir < 0) this.x = Math.max(30, this.x - 4);
 
     for (const p of this.platforms) {
-      p.x -= this.scrollSpeed;
-      if (p.hasCrystal) p.crystalX -= this.scrollSpeed;
-      if (p.hasBeacon) p.beaconX -= this.scrollSpeed;
+      p.x -= finalScroll;
+      if (p.hasCrystal) p.crystalX -= finalScroll;
+      if (p.hasBeacon) p.beaconX -= finalScroll;
     }
-    this.runDistance += this.scrollSpeed;
+    this.runDistance += finalScroll;
 
     this.platforms = this.platforms.filter(p => p.x + p.w > -100);
     while (this.platforms.length < 10) {
@@ -146,7 +158,7 @@ export const jumper = {
     G.score += 0.02;
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = ctx();
     const COL = COLORS[0];
     for (const p of this.platforms) {
@@ -193,6 +205,9 @@ export const jumper = {
         c.textAlign = 'left';
       }
     }
+    
+    if (skipPlayer) return;
+
     const px = this.x, py = this.y;
     c.shadowColor = COL;
     c.shadowBlur = 16;

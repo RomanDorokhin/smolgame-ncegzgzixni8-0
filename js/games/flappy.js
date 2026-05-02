@@ -53,9 +53,16 @@ export const flappy = {
     }
     if (!jump) this.jumped = false;
 
-    this.bird.vy += this.gravity;
+    const mod = G.currentMod;
+    let grav = this.gravity;
+    if (mod.name === 'ЛЕГКОСТЬ') grav *= 0.6;
+    
+    this.bird.vy += grav;
     this.bird.y += this.bird.vy;
     this.bird.angle = Math.max(-0.4, Math.min(0.6, this.bird.vy * 0.06));
+
+    let finalSpeed = this.pipeSpeed;
+    if (mod.name === 'УСКОРЕНИЕ') finalSpeed *= 1.4;
 
     if (this.bird.y - this.bird.r < 0 || this.bird.y + this.bird.r > G.H() - 60) {
       spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
@@ -70,7 +77,7 @@ export const flappy = {
     }
 
     for (const p of this.pipes) {
-      p.x -= this.pipeSpeed;
+      p.x -= finalSpeed;
       if (!p.passed && p.x + this.pipeW < this.bird.x) {
         p.passed = true;
         this.pipesPassed++;
@@ -94,7 +101,7 @@ export const flappy = {
     G.score += 0.03;
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const COL = COLORS[4];
     for (const p of this.pipes) {
@@ -116,6 +123,8 @@ export const flappy = {
     c.fillText(this.pipesPassed + ' / ' + this.pipesNeeded + ' препятствий', G.W() / 2, 52);
     c.textAlign = 'left';
     c.fillRect(0, G.H() - 60, G.W(), 60);
+
+    if (skipPlayer) return;
 
     c.save();
     c.translate(this.bird.x, this.bird.y);

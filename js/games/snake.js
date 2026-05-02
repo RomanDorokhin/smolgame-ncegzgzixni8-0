@@ -61,6 +61,21 @@ export const snake = {
   ensureMealsOnField() {
     const need = 2 - this.countMealsOnFood();
     for (let k = 0; k < need; k++) this.spawnMeal();
+    if (Math.random() < 0.005 && !this.food.find(f => f.isGolden)) {
+      this.spawnGoldenFood();
+    }
+  },
+
+  spawnGoldenFood() {
+    let tries = 0;
+    while (tries++ < 120) {
+      const x = Math.floor(Math.random() * this.gridW);
+      const y = Math.floor(Math.random() * this.gridH);
+      if (!this.body.find(b => b.x === x && b.y === y) && !this.food.find(f => f.x === x && f.y === y)) {
+        this.food.push({ x, y, isMeal: true, isGolden: true, pulse: 0 });
+        return;
+      }
+    }
   },
 
   spawnMeal() {
@@ -76,13 +91,27 @@ export const snake = {
   },
 
   update() {
-    if (G.keys['ArrowUp'] && this.dir.y !== 1) this.nextDir = { x: 0, y: -1 };
-    if (G.keys['ArrowDown'] && this.dir.y !== -1) this.nextDir = { x: 0, y: 1 };
-    if (G.keys['ArrowLeft'] && this.dir.x !== 1) this.nextDir = { x: -1, y: 0 };
-    if (G.keys['ArrowRight'] && this.dir.x !== -1) this.nextDir = { x: 1, y: 0 };
+    const mod = G.currentMod;
+    let up = G.keys['ArrowUp'];
+    let down = G.keys['ArrowDown'];
+    let left = G.keys['ArrowLeft'];
+    let right = G.keys['ArrowRight'];
+
+    if (mod.name === 'ИНВЕРСИЯ') {
+      [up, down] = [down, up];
+      [left, right] = [right, left];
+    }
+
+    if (up && this.dir.y !== 1) this.nextDir = { x: 0, y: -1 };
+    if (down && this.dir.y !== -1) this.nextDir = { x: 0, y: 1 };
+    if (left && this.dir.x !== 1) this.nextDir = { x: -1, y: 0 };
+    if (right && this.dir.x !== -1) this.nextDir = { x: 1, y: 0 };
 
     this.timer++;
-    if (this.timer < this.speed) return;
+    let finalSpeed = this.speed;
+    if (mod.name === 'УСКОРЕНИЕ') finalSpeed = Math.max(1, finalSpeed - 2);
+
+    if (this.timer < finalSpeed) return;
     this.timer = 0;
     this.dir = { ...this.nextDir };
 
@@ -112,6 +141,15 @@ export const snake = {
         this.mealsEaten++;
         G.score += 30;
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 12);
+        
+        if (piece.isGolden) {
+          G.carryover.snakeMeals = 15; // Max bonus
+          G.score += 500;
+          spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fbbf24', 40);
+          triggerMorph('objective');
+          return;
+        }
+
         if (this.mealsEaten >= this.mealsNeeded) {
           G.carryover.snakeMeals = this.mealsEaten;
           spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 22);
@@ -130,7 +168,7 @@ export const snake = {
     for (const f of this.food) f.pulse += 0.12;
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const COL = COLORS[1];
     const cs = this.cellSize;
@@ -158,6 +196,13 @@ export const snake = {
         c.arc(fx + f.x * cs + cs / 2, fy + f.y * cs + cs / 2, cs / 2 - 2 + pulse * 0.3, 0, Math.PI * 2);
         c.fill();
         c.shadowBlur = 0;
+        if (f.isGolden) {
+          c.fillStyle = '#fff';
+          c.font = '12px serif';
+          c.textAlign = 'center';
+          c.fillText('★', fx + f.x * cs + cs / 2, fy + f.y * cs + cs / 2 + 4);
+          c.textAlign = 'left';
+        }
       } else {
         c.fillStyle = '#ef4444';
         c.shadowColor = '#ef4444';
@@ -168,6 +213,8 @@ export const snake = {
         c.shadowBlur = 0;
       }
     }
+
+    if (skipPlayer) return;
 
     for (let i = 0; i < this.body.length; i++) {
       const b = this.body[i];

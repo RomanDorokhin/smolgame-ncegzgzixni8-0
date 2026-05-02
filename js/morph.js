@@ -159,64 +159,66 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
 export function drawMorphTransition(uRaw) {
   const c = G.ctx;
   const u = easeMorphT(uRaw, G.morphStyle);
-  const ax = G.morphSnapshotFrom.px + (G.morphSnapshotTo.px - G.morphSnapshotFrom.px) * uRaw;
-  const ay = G.morphSnapshotFrom.py + (G.morphSnapshotTo.py - G.morphSnapshotFrom.py) * uRaw;
-
-  c.save();
-  c.globalCompositeOperation = 'lighter';
-  const g = c.createRadialGradient(ax, ay, 0, ax, ay, 120 + uRaw * 80);
-  g.addColorStop(0, COLORS[G.morphFrom] + '55');
-  g.addColorStop(0.5, COLORS[G.morphTo] + '33');
-  g.addColorStop(1, 'transparent');
-  c.fillStyle = g;
-  c.fillRect(0, 0, G.W(), G.H());
-  c.restore();
-
-  const gooW = 40 + (1 - u) * 60 + Math.sin(uRaw * Math.PI * 3) * 12;
-  const gooH = 40 + u * 90 + Math.cos(uRaw * Math.PI * 2) * 20;
-  c.save();
-  c.translate(ax, ay);
-  c.rotate(uRaw * Math.PI * 0.6 * (G.morphFrom % 2 === 0 ? 1 : -1));
-  c.globalAlpha = G.morphStyle === 'flash' ? 0.35 : 0.22;
-  c.fillStyle = COLORS[G.morphTo];
-  c.beginPath();
-  c.ellipse(0, 0, gooW, gooH * 0.45, uRaw * 0.8, 0, Math.PI * 2);
-  c.fill();
-  c.restore();
+  const snapFrom = captureMorphSnapshot(G.morphFrom);
+  const snapTo = captureMorphSnapshot(G.morphTo);
 
   const aFrom = G.morphStyle === 'flash' ? (uRaw < 0.5 ? 0.95 : 0.08) : (1 - u) * 0.92;
   const aTo = G.morphStyle === 'flash' ? (uRaw < 0.5 ? 0.1 : 0.95) : u * 0.92;
-  drawMorphShapeAt(G.morphSnapshotFrom, aFrom, uRaw);
+  
+  // Environment warping effect
+  c.save();
+  c.globalCompositeOperation = 'overlay';
+  c.strokeStyle = COLORS[G.morphTo] + '44';
+  c.lineWidth = 1;
+  const gridS = 40;
+  for (let x = 0; x < G.W(); x += gridS) {
+    c.beginPath();
+    const off = Math.sin(uRaw * Math.PI + x * 0.01) * 20 * Math.sin(uRaw * Math.PI);
+    c.moveTo(x + off, 0);
+    c.lineTo(x - off, G.H());
+    c.stroke();
+  }
+  c.restore();
+
+  drawMorphShapeAt(snapFrom, aFrom, uRaw);
 
   // Hybrid moments
-  if (uRaw > 0.3 && uRaw < 0.7) {
+  if (uRaw > 0.2 && uRaw < 0.8) {
+    const ax = snapFrom.px + (snapTo.px - snapFrom.px) * uRaw;
+    const ay = snapFrom.py + (snapTo.py - snapFrom.py) * uRaw;
+    
     if (G.morphFrom === 0 && G.morphTo === 1) {
       // Jumper -> Snake: trail
       c.save();
       c.strokeStyle = COLORS[1];
-      c.lineWidth = 10;
-      c.globalAlpha = 0.4;
+      c.lineWidth = 14;
+      c.globalAlpha = 0.5;
+      c.lineCap = 'round';
       c.beginPath();
-      c.moveTo(ax - 50, ay);
+      c.moveTo(ax - 60 * (1-uRaw), ay);
       c.lineTo(ax, ay);
       c.stroke();
       c.restore();
     } else if (G.morphFrom === 1 && G.morphTo === 2) {
       // Snake -> Arkanoid: head as ball
       c.fillStyle = '#fff';
+      c.shadowColor = '#fff';
+      c.shadowBlur = 15;
       c.beginPath();
       c.arc(ax, ay, 12, 0, Math.PI * 2);
       c.fill();
+      c.shadowBlur = 0;
     } else if (G.morphFrom === 2 && G.morphTo === 3) {
       // Arkanoid -> Shooter: ball splits
       c.fillStyle = '#fff';
       for (let i = 0; i < 3; i++) {
-        c.fillRect(ax - 20 + i * 20, ay - 10, 4, 10);
+        const o = (i - 1) * 20 * uRaw;
+        c.fillRect(ax + o - 2, ay - 10, 4, 15);
       }
     }
   }
 
-  drawMorphShapeAt(G.morphSnapshotTo, aTo, uRaw);
+  drawMorphShapeAt(snapTo, aTo, uRaw);
 
   c.save();
   c.strokeStyle = 'rgba(255,255,255,' + (0.15 + uRaw * 0.25) + ')';
