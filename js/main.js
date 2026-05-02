@@ -252,17 +252,31 @@ function startGame() {
   G.rafId = requestAnimationFrame(loop);
 }
 
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  
+  G.canvas.width = w * dpr;
+  G.canvas.height = h * dpr;
+  G.canvas.style.width = w + 'px';
+  G.canvas.style.height = h + 'px';
+  
+  G.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  
+  // Re-init stars for new size
+  initStars();
+}
+
 loadBestScore();
 resize();
 window.addEventListener('resize', resize);
 bindInput(G.canvas);
 
-document.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && G.running && !G.morphing) {
-    G.paused = !G.paused;
-    const pauseEl = document.getElementById('pauseHint');
-    if (pauseEl) pauseEl.style.display = G.paused ? 'block' : 'none';
-  }
-});
+// Block context menu and long-press
+window.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('touchstart', e => {
+  if (e.touches.length > 1) e.preventDefault(); // Block multi-touch zoom
+}, { passive: false });
 
 document.getElementById('startBtn').addEventListener('click', startGame);

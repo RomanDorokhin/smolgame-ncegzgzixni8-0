@@ -3,8 +3,8 @@ import { MODES, COLORS, PALETTES } from './constants.js';
 const localG = {
   canvas: null,
   ctx: null,
-  W() { return this.canvas?.width ?? 0; },
-  H() { return this.canvas?.height ?? 0; },
+  W() { return window.innerWidth; },
+  H() { return window.innerHeight; },
 
   score: 0,
   stageOrder: [0, 1, 2, 3, 4],
