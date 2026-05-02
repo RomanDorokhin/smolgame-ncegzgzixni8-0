@@ -1,48 +1,70 @@
 import { G } from './gameState.js';
 
 export function bindInput(canvas) {
-  G.keys = {};
-  G.touchJump = false;
+  const G = window.G;
+  if (!G) return;
 
-  document.addEventListener('keydown', e => {
-    G.keys[e.code] = true;
-    if (e.code === 'Space' || e.code === 'ArrowUp') G.touchJump = true;
-  });
-  document.addEventListener('keyup', e => {
-    G.keys[e.code] = false;
+  // Key handlers
+  window.addEventListener('keydown', e => { G.keys[e.code] = true; });
+  window.addEventListener('keyup', e => { G.keys[e.code] = false; });
+
+  // Touch state
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let lastTouchX = 0;
+
+  canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    lastTouchX = t.clientX;
+    
+    // Tap to jump for Jumper (0) or Flappy (4)
+    if (G.gameMode === 0 || G.gameMode === 4) {
+      G.touchJump = true;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    
+    // Swipe for Snake (1)
+    if (G.gameMode === 1) {
+      const threshold = 30;
+      if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx > 0) G.keys['ArrowRight'] = true; else G.keys['ArrowLeft'] = true;
+          // Reset vertical keys
+          G.keys['ArrowUp'] = false; G.keys['ArrowDown'] = false;
+        } else {
+          if (dy > 0) G.keys['ArrowDown'] = true; else G.keys['ArrowUp'] = true;
+          // Reset horizontal keys
+          G.keys['ArrowLeft'] = false; G.keys['ArrowRight'] = false;
+        }
+        // Reset start position for continuous swiping
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+      }
+    }
+
+    // Slide for Arkanoid (2) or Shooter (3)
+    if (G.gameMode === 2 || G.gameMode === 3) {
+      const moveX = t.clientX - lastTouchX;
+      if (moveX > 2) { G.keys['ArrowRight'] = true; G.keys['ArrowLeft'] = false; }
+      else if (moveX < -2) { G.keys['ArrowLeft'] = true; G.keys['ArrowRight'] = false; }
+      else { G.keys['ArrowLeft'] = false; G.keys['ArrowRight'] = false; }
+      lastTouchX = t.clientX;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => {
     G.touchJump = false;
+    if (G.gameMode === 2 || G.gameMode === 3) {
+      G.keys['ArrowLeft'] = false;
+      G.keys['ArrowRight'] = false;
+    }
   });
-  window.addEventListener('blur', () => {
-    for (const k of Object.keys(G.keys)) G.keys[k] = false;
-    G.touchJump = false;
-  });
-
-  function setupBtn(id, code) {
-    const el = document.getElementById(id);
-    el.addEventListener('touchstart', e => {
-      e.preventDefault();
-      G.keys[code] = true;
-      if (code === 'ArrowUp' || code === 'Space') G.touchJump = true;
-    }, { passive: false });
-    el.addEventListener('touchend', e => {
-      e.preventDefault();
-      G.keys[code] = false;
-      G.touchJump = false;
-    }, { passive: false });
-    el.addEventListener('mousedown', () => {
-      G.keys[code] = true;
-      if (code === 'ArrowUp' || code === 'Space') G.touchJump = true;
-    });
-    el.addEventListener('mouseup', () => {
-      G.keys[code] = false;
-      G.touchJump = false;
-    });
-  }
-  setupBtn('btnUp', 'ArrowUp');
-  setupBtn('btnDown', 'ArrowDown');
-  setupBtn('btnLeft', 'ArrowLeft');
-  setupBtn('btnRight', 'ArrowRight');
-
-  canvas.addEventListener('touchstart', e => { e.preventDefault(); G.touchJump = true; }, { passive: false });
-  canvas.addEventListener('touchend', e => { e.preventDefault(); G.touchJump = false; }, { passive: false });
 }
