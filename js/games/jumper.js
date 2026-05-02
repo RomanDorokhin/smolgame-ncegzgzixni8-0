@@ -16,19 +16,26 @@ export const jumper = {
 
   init() {
     this.x = G.W() / 2 - 18;
-    this.y = G.H() - 100;
+    this.y = G.H() - 150; // Spawn slightly higher
     this.vx = 0; this.vy = 0;
-    this.camY = this.y - G.H() * 0.7;
+    this.camY = this.y - G.H() * 0.5;
     this.crystals = [];
     this.platforms = [];
     this.crystalsCollected = 0;
     this.crystalsNeeded = 5 + G.cycle * 2;
 
-    // Start platform
-    this.platforms.push({ x: this.x - 50, y: this.y + 40, w: 140, h: 20 });
+    // Guaranteed safe start platform
+    const startPW = 200;
+    this.platforms.push({ 
+      x: this.x - startPW / 2 + 18, 
+      y: this.y + 36, 
+      w: startPW, 
+      h: 40 
+    });
+    this.grounded = true;
     
-    // Gen platforms
-    let curY = this.y - 100;
+    // Gen platforms higher up
+    let curY = this.y - 120;
     for (let i = 0; i < 40; i++) {
       const pw = 80 + Math.random() * 60;
       this.platforms.push({
