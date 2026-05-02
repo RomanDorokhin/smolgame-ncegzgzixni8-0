@@ -19,12 +19,36 @@ export function spawnParticles(x, y, color, count = 12) {
   }
 }
 
+export function spawnSoulParticles(x, y, color, count, lifeMult = 1) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * 60;
+    G.particles.push({
+      x: x + Math.cos(angle) * dist,
+      y: y + Math.sin(angle) * dist,
+      vx: Math.cos(angle) * (0.5 + Math.random() * 0.5),
+      vy: Math.sin(angle) * (0.5 + Math.random() * 0.5),
+      life: 1,
+      decay: (0.008 + Math.random() * 0.012) / lifeMult,
+      size: 1 + Math.random() * 2,
+      color,
+      soul: true
+    });
+  }
+}
+
 export function updateParticles() {
   G.particles = G.particles.filter(p => p.life > 0);
   for (const p of G.particles) {
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += 0.1;
+    if (p.soul) {
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+      p.vy -= 0.02; // souls drift upward
+    } else {
+      p.vy += 0.1;
+    }
     p.life -= p.decay;
   }
 }
@@ -33,10 +57,19 @@ export function drawParticles() {
   const c = ctx();
   for (const p of G.particles) {
     c.globalAlpha = p.life;
-    c.fillStyle = p.color;
-    c.beginPath();
-    c.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    c.fill();
+    if (p.soul) {
+      c.fillStyle = '#fff';
+      c.shadowColor = p.color;
+      c.shadowBlur = 8 * p.life;
+      const s = p.size * p.life;
+      c.fillRect(p.x - s/2, p.y - s/2, s, s);
+      c.shadowBlur = 0;
+    } else {
+      c.fillStyle = p.color;
+      c.beginPath();
+      c.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      c.fill();
+    }
   }
   c.globalAlpha = 1;
 }

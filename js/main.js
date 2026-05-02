@@ -145,16 +145,6 @@ function loop() {
     // Peak of morph = screenshake!
     if (G.morphT > 0.1 && G.morphT < 0.2 && G.shake < 5) G.shake = 15;
     
-    let msg = "";
-    if (G.morphFrom === 2 && G.morphTo === 3) msg = "БЛОКИ \u2192 ЗАЩИТА";
-    if (msg) {
-      c.save();
-      c.fillStyle = '#fff';
-      c.textAlign = 'center';
-      c.fillText(msg, G.W()/2, G.H()/2 - 120);
-      c.restore();
-    }
-
     if (G.morphT >= 1 || (performance.now() - G.morphStartReal > 5000)) {
       G.morphing = false;
       G.morphT = 1;
@@ -193,6 +183,10 @@ function loop() {
   }
   if (G.carryover.shooterKills > 0) {
     c.fillText('УБИЙСТВА: +' + G.carryover.shooterKills, 20, yPos);
+    yPos += 15;
+  }
+  if (G.carryover.flappyHeight > 0) {
+    c.fillText('ВЫСОТА: +' + G.carryover.flappyHeight, 20, yPos);
     yPos += 15;
   }
 

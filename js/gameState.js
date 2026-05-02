@@ -43,6 +43,7 @@ const localG = {
     snakeMeals: 0,
     bricksCleared: 0,
     shooterKills: 0,
+    flappyHeight: 0,
   },
 
   modifiers: [
@@ -92,6 +93,7 @@ export function resetCarryover() {
     snakeMeals: 0,
     bricksCleared: 0,
     shooterKills: 0,
+    flappyHeight: 0,
   };
 }
 

@@ -3,267 +3,174 @@ import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
 
 export const jumper = {
-  x: 0, y: 0, vy: 0,
-  w: 36, h: 36,
-  onGround: false,
+  x: 0, y: 0, vx: 0, vy: 0,
+  w: 30, h: 30,
+  grounded: false,
   platforms: [],
-  scrollSpeed: 2,
-  jumpPressed: false,
-  runDistance: 0,
-  runThreshold: 2000,
-  morphQueued: false,
-  crystalsTaken: 0,
-  crystalsNeeded: 3,
-  isHuntingSnake: false,
-  snakeEgg: null,
+  crystals: [],
+  crystalsNeeded: 5,
+  crystalsCollected: 0,
+  camY: 0,
+  gravity: 0.5,
+  jumpStr: -10,
+  speed: 5,
+  width: 0, height: 0,
 
   init() {
-    this.morphQueued = false;
-    this.x = G.W() * 0.2;
-    this.y = G.H() - 160;
-    this.vy = 0;
-    this.onGround = false;
-    this.jumpPressed = false;
-    this.crystalsTaken = 0;
-    this.crystalsNeeded = 3;
-    this.isHuntingSnake = false;
-    this.snakeEgg = null;
+    this.width = G.W();
+    this.height = G.H();
+    this.x = this.width / 2;
+    this.y = this.height - 120;
+    this.vx = 0; this.vy = 0;
+    this.grounded = false;
+    this.camY = 0;
+    this.crystalsCollected = 0;
+    const bonus = G.carryover.flappyHeight || 0;
+    this.crystalsNeeded = Math.max(3, 5 - Math.floor(bonus / 50));
     this.platforms = [];
-    this.scrollSpeed = 2 + G.cycle * 0.4;
-    this.runDistance = 0;
-    this.runThreshold = 1200 + Math.random() * 1800 + G.cycle * 280;
-    const groundY = G.H() - 80;
-    this.platforms.push({ x: -G.W(), y: groundY, w: G.W() * 3, h: 20, color: '#333', isGap: false });
-    for (let i = 0; i < 8; i++) {
-      const last = this.platforms.length > 0 ? this.platforms[this.platforms.length-1] : null;
-      this.platforms.push(this.newPlatform(G.W() * 0.4 + i * 180, i === 0, last));
-    }
+    this.crystals = [];
+    for (let i = 0; i < 12; i++) this.spawnPlatform(i);
   },
 
-  newPlatform(x, isFirst = false, last = null) {
-    const isGap = !isFirst && Math.random() < 0.25;
-    const p = {
-      x: last ? last.x + 150 + Math.random() * 100 : x,
-      y: last ? Math.max(150, Math.min(G.H() - 150, last.y + (Math.random() - 0.5) * 200)) : G.H() - 160,
-      w: isFirst ? 400 : 80 + Math.random() * 80,
-      h: 15,
-      isGap,
-      color: isGap ? '#333' : COLORS[0],
-      hasCrystal: !isGap && !isFirst && Math.random() < 0.3,
-      crystalX: 0, crystalY: 0, crystalTaken: false,
-      hasBeacon: !isGap && !isFirst && Math.random() < 0.05,
-      beaconX: 0, beaconY: 0, beaconTaken: false,
-      hasSnakeEgg: this.isHuntingSnake && !isGap && Math.random() < 0.1
-    };
-    if (p.hasCrystal) {
-        p.crystalX = p.x + p.w * 0.5;
-        p.crystalY = p.y - 24;
+  spawnPlatform(idx) {
+    const y = this.height - 80 - idx * 70;
+    const w = 80 + Math.random() * 60;
+    const x = Math.random() * (this.width - w);
+    this.platforms.push({ x, y, w, h: 12 });
+    if (idx > 0 && Math.random() < 0.6) {
+      this.crystals.push({
+        x: x + w / 2 - 8,
+        y: y - 20,
+        w: 16, h: 16,
+        collected: false,
+        pulse: Math.random() * 6
+      });
     }
-    if (p.hasBeacon) {
-        p.beaconX = p.x + p.w * 0.5;
-        p.beaconY = p.y - 36;
-    }
-    if (p.hasSnakeEgg) {
-        this.platforms.forEach(pl => pl.hasSnakeEgg = false);
-    }
-    return p;
-  },
-
-  tryObjectiveMorph() {
-    if (this.morphQueued || G.morphing) return;
-    this.morphQueued = true;
-    G.triggerMorph('objective');
   },
 
   update() {
-    if (this.morphQueued) return;
-    const jumped = G.touchJump || G.keys['ArrowUp'] || G.keys['Space'];
-
-    if (jumped && this.onGround && !this.jumpPressed) {
-      this.vy = -14;
-      this.jumpPressed = true;
-      spawnParticles(this.x + this.w / 2, this.y + this.h, COLORS[0], 6);
-    }
-    if (!jumped) this.jumpPressed = false;
-
     const mod = G.currentMod;
-    let finalScroll = this.scrollSpeed;
-    if (mod.name === 'УСКОРЕНИЕ') finalScroll *= 1.35;
-    
-    let grav = 0.55;
-    if (mod.name === 'ЛЕГКОСТЬ') grav *= 0.65;
+    let g = this.gravity;
+    if (mod.name === 'ЛЕГКОСТЬ') g *= 0.7;
 
-    this.vy += grav;
+    if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.vx = -this.speed;
+    else if (G.keys['ArrowRight'] || G.keys['KeyD']) this.vx = this.speed;
+    else this.vx *= 0.8;
+
+    if ((G.keys['ArrowUp'] || G.keys['Space'] || G.touchJump) && this.grounded) {
+      this.vy = this.jumpStr;
+      this.grounded = false;
+    }
+
+    this.vy += g;
+    this.x += this.vx;
     this.y += this.vy;
-    this.onGround = false;
 
-    let moveDir = 0;
-    if (G.keys['ArrowRight']) moveDir += 1;
-    if (G.keys['ArrowLeft']) moveDir -= 1;
-    if (mod.name === 'ИНВЕРСИЯ') moveDir *= -1;
-
-    if (moveDir > 0) this.x = Math.min(G.W() * 0.6, this.x + 4);
-    if (moveDir < 0) this.x = Math.max(30, this.x - 4);
-
+    this.grounded = false;
     for (const p of this.platforms) {
-      p.x -= finalScroll;
-      if (p.hasCrystal) p.crystalX -= finalScroll;
-      if (p.hasBeacon) p.beaconX -= finalScroll;
-    }
-    this.runDistance += finalScroll;
-
-    this.platforms = this.platforms.filter(p => p.x + p.w > -100);
-    while (this.platforms.length < 10) {
-      const last = this.platforms.reduce((a, b) => (a.x > b.x ? a : b));
-      this.platforms.push(this.newPlatform(0, false, last));
-    }
-
-    for (const p of this.platforms) {
-      if (this.vy > 0 &&
-          this.x + this.w > p.x && this.x < p.x + p.w &&
-          this.y + this.h > p.y && this.y + this.h < p.y + p.h + 12) {
-        this.y = p.y - this.h;
+      if (
+        this.x + this.w / 2 > p.x &&
+        this.x - this.w / 2 < p.x + p.w &&
+        this.y + this.h / 2 >= p.y &&
+        this.y + this.h / 2 <= p.y + p.h + 10 &&
+        this.vy >= 0
+      ) {
+        this.y = p.y - this.h / 2;
         this.vy = 0;
-        this.onGround = true;
+        this.grounded = true;
       }
-      if (p.hasCrystal && !p.crystalTaken && this.x + this.w > p.crystalX - 10 && this.x < p.crystalX + 10 && this.y + this.h > p.crystalY - 10 && this.y < p.crystalY + 10) {
-        p.crystalTaken = true;
-        this.crystalsTaken++;
-        G.score += 100;
-        spawnParticles(p.crystalX, p.crystalY, '#c4b5fd', 15);
-        if (this.crystalsTaken >= this.crystalsNeeded) {
-          this.isHuntingSnake = true;
-        }
-      }
-      
-      if (this.isHuntingSnake && p.hasSnakeEgg && this.vy > 0 && this.y + this.h >= p.y && this.y + this.h <= p.y + 15 && this.x + this.w > p.x && this.x < p.x + p.w) {
-        G.carryover.jumperCrystals = this.crystalsTaken;
-        spawnParticles(this.x + this.w/2, this.y + this.h, COLORS[1], 40);
-        G.triggerMorph('objective');
-        return;
-      }
+    }
 
-      if (p.hasBeacon && !p.beaconTaken) {
-        const dx = (this.x + this.w / 2) - p.beaconX;
-        const dy = (this.y + this.h / 2) - p.beaconY;
-        if (Math.sqrt(dx * dx + dy * dy) < 26) {
-          p.beaconTaken = true;
-          G.score += 40;
-          spawnParticles(p.beaconX, p.beaconY, '#38bdf8', 16);
-          this.tryObjectiveMorph();
+    if (this.x < 0) this.x = this.width;
+    if (this.x > this.width) this.x = 0;
+
+    // Camera follow upward
+    const targetCamY = Math.min(0, this.height - this.y - 200);
+    this.camY += (targetCamY - this.camY) * 0.1;
+
+    // Crystal collection
+    for (const c of this.crystals) {
+      if (c.collected) continue;
+      if (
+        this.x > c.x && this.x < c.x + c.w &&
+        this.y > c.y && this.y < c.y + c.h
+      ) {
+        c.collected = true;
+        this.crystalsCollected++;
+        G.score += 100;
+        G.carryover.jumperCrystals = this.crystalsCollected;
+        spawnParticles(c.x + 8, c.y + 8, COLORS[0], 10);
+        if (this.crystalsCollected >= this.crystalsNeeded) {
+          G.triggerMorph('objective');
           return;
         }
       }
+      c.pulse += 0.1;
     }
 
-    if (this.runDistance >= this.runThreshold) {
-      spawnParticles(this.x + this.w / 2, this.y + this.h / 2, '#a78bfa', 18);
-      this.tryObjectiveMorph();
-      return;
-    }
-
-    if (this.y > G.H() + 100) {
-      spawnParticles(this.x + this.w / 2, G.H(), COLORS[0], 20);
+    // Death by falling
+    if (this.y > this.height + 100) {
+      spawnParticles(this.x, this.height, COLORS[0], 16);
       G.triggerMorph('death');
-      return;
     }
 
-    G.score += 0.02;
+    // Spawn new platforms as we go up
+    const topPlatform = this.platforms[this.platforms.length - 1];
+    if (topPlatform && topPlatform.y + this.camY > -100) {
+      this.spawnPlatform(this.platforms.length);
+    }
   },
 
-  draw(skipPlayer = false) {
+  draw() {
     const c = G.ctx;
-    const COL = COLORS[0];
+    const col = COLORS[0];
+    c.save();
+    c.translate(0, this.camY);
+
+    // Platforms
+    c.fillStyle = 'rgba(255,255,255,0.15)';
     for (const p of this.platforms) {
-      if (p.isGap) continue;
-      c.shadowColor = COL;
-      c.shadowBlur = 6;
-      c.fillStyle = p.color === '#333' ? '#1a1a1a' : COL;
-      c.globalAlpha = p.color === '#333' ? 0.5 : 0.8;
       c.fillRect(p.x, p.y, p.w, p.h);
-      c.globalAlpha = 1;
-      c.shadowBlur = 0;
-      if (p.hasCrystal && !p.crystalTaken) {
-        const cx = p.crystalX, cy = p.crystalY;
-        c.fillStyle = '#c4b5fd';
-        c.shadowColor = '#8b5cf6';
-        c.shadowBlur = 12;
-        c.beginPath();
-        c.moveTo(cx, cy - 10);
-        c.lineTo(cx + 8, cy - 2);
-        c.lineTo(cx + 6, cy + 8);
-        c.lineTo(cx - 6, cy + 8);
-        c.lineTo(cx - 8, cy - 2);
-        c.closePath();
-        c.fill();
-        c.shadowBlur = 0;
-      }
-      if (p.hasBeacon && !p.beaconTaken) {
-        const bx = p.beaconX, by = p.beaconY;
-        const pulse = Math.sin(Date.now() * 0.004) * 4;
-        c.strokeStyle = '#38bdf8';
-        c.lineWidth = 2;
-        c.shadowColor = '#0ea5e9';
-        c.shadowBlur = 14 + pulse;
-        c.beginPath();
-        c.arc(bx, by, 12 + pulse * 0.2, 0, Math.PI * 2);
-        c.stroke();
-        c.fillStyle = 'rgba(56,189,248,0.35)';
-        c.fill();
-        c.shadowBlur = 0;
-        c.fillStyle = 'rgba(255,255,255,0.9)';
-        c.font = '9px Courier New';
-        c.textAlign = 'center';
-        c.fillText('◇', bx, by + 3);
-        c.textAlign = 'left';
-      }
-      if (p.hasSnakeEgg) {
-        const ex = p.x + p.w / 2, ey = p.y - 15;
-        const pulse = Math.sin(Date.now() * 0.005) * 5;
-        c.fillStyle = COLORS[1];
-        c.shadowColor = COLORS[1];
-        c.shadowBlur = 15 + pulse;
-        c.beginPath();
-        c.ellipse(ex, ey, 12 + pulse*0.2, 18 + pulse*0.3, 0, 0, Math.PI*2);
-        c.fill();
-        c.shadowBlur = 0;
-        c.fillStyle = '#fff';
-        c.font = 'bold 9px Courier New';
-        c.textAlign = 'center';
-        c.fillText('ЯЙЦО', ex, ey + 4);
-        c.textAlign = 'left';
-      }
     }
-    
-    if (skipPlayer) return;
 
-    const px = this.x, py = this.y;
-    c.shadowColor = COL;
-    c.shadowBlur = 16;
-    c.fillStyle = COL;
-    c.fillRect(px, py, this.w, this.h);
+    // Crystals
+    for (const cr of this.crystals) {
+      if (cr.collected) continue;
+      const pulse = Math.sin(cr.pulse) * 3;
+      c.fillStyle = '#e9d5ff';
+      c.shadowColor = col;
+      c.shadowBlur = 12 + pulse;
+      c.fillRect(cr.x + pulse, cr.y + pulse, cr.w - pulse * 2, cr.h - pulse * 2);
+      c.shadowBlur = 0;
+    }
+
+    // Player
+    c.fillStyle = col;
+    c.shadowColor = col;
+    c.shadowBlur = 15;
+    c.fillRect(this.x - this.w / 2, this.y - this.h / 2, this.w, this.h);
     c.shadowBlur = 0;
-    c.fillStyle = '#fff';
-    c.fillRect(px + 7, py + 9, 7, 9);
-    c.fillRect(px + 22, py + 9, 7, 9);
-    c.fillStyle = '#000';
-    c.fillRect(px + 9, py + 12, 4, 5);
-    c.fillRect(px + 24, py + 12, 4, 5);
 
-    c.fillStyle = 'rgba(255,255,255,0.3)';
-    c.font = '10px Courier New';
-    c.textAlign = 'right';
-    const rd = Math.min(100, Math.floor((this.runDistance / this.runThreshold) * 100));
-    c.fillText(rd + '% пути', G.W() - 14, 52);
-    c.fillText(G.carryover.jumperCrystals + ' / 3 кристаллов', G.W() - 14, 70);
+    // Eyes
+    c.fillStyle = '#fff';
+    c.fillRect(this.x - 8, this.y - 8, 5, 5);
+    c.fillRect(this.x + 3, this.y - 8, 5, 5);
+
+    c.restore();
+
+    // UI
+    c.fillStyle = '#fff';
+    c.font = 'bold 14px Courier New';
+    c.textAlign = 'center';
+    c.fillText('КРИСТАЛЛЫ: ' + this.crystalsCollected + ' / ' + this.crystalsNeeded, this.width / 2, 80);
     c.textAlign = 'left';
   },
 
   getSnapshot() {
     return {
       mode: 0,
-      px: this.x + this.w / 2,
-      py: this.y + this.h / 2,
+      px: this.x,
+      py: this.y + this.camY,
       w: this.w,
       h: this.h
     };
@@ -272,26 +179,24 @@ export const jumper = {
   drawSnapshot(snap, alpha, uMorph) {
     const c = G.ctx;
     const col = COLORS[0];
-    const s = 1 + Math.sin(uMorph * Math.PI) * 0.15;
-    
     c.save();
     c.globalAlpha = alpha;
     c.fillStyle = col;
     c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 40 : 20;
-    
-    if (G.evolutionFeatures.includes('aura')) {
-        c.strokeStyle = 'rgba(255,255,255,0.4)';
-        c.lineWidth = 2;
-        c.strokeRect(snap.px - (snap.w * s) / 2 - 5, snap.py - (snap.h * s) / 2 - 5, snap.w * s + 10, snap.h * s + 10);
-    }
-    
-    c.fillRect(snap.px - (snap.w * s) / 2, snap.py - (snap.h * s) / 2, snap.w * s, snap.h * s);
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 12;
+    const size = (snap.w || 30) * (0.8 + uMorph * 0.2);
+    c.fillRect(snap.px - size / 2, snap.py - size / 2, size, size);
     c.shadowBlur = 0;
-    
     c.fillStyle = '#fff';
-    c.fillRect(snap.px - 10, snap.py - 8, 6, 7);
-    c.fillRect(snap.px + 2, snap.py - 8, 6, 7);
+    c.fillRect(snap.px - 8, snap.py - 8, 5, 5);
+    c.fillRect(snap.px + 3, snap.py - 8, 5, 5);
+    if (G.evolutionFeatures.includes('wings')) {
+      c.fillStyle = 'rgba(255,255,255,0.3)';
+      c.beginPath();
+      c.ellipse(snap.px - 18, snap.py - 5, 12, 5, -0.4, 0, Math.PI * 2);
+      c.ellipse(snap.px + 18, snap.py - 5, 12, 5, 0.4, 0, Math.PI * 2);
+      c.fill();
+    }
     c.restore();
   }
 };

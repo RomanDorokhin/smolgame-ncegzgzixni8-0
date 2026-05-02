@@ -3,230 +3,176 @@ import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
 
 export const flappy = {
-  bird: { x: 0, y: 0, vy: 0, r: 14, angle: 0 },
+  x: 0, y: 0, vy: 0,
+  w: 20, h: 20,
   pipes: [],
-  pipesPassed: 0,
-  pipesNeeded: 6,
-  pipeW: 52,
-  gap: 160,
-  pipeSpeed: 3,
   pipeTimer: 0,
-  pipeInterval: 110,
-  gravity: 0.45,
-  jumpForce: -8,
-  jumped: false,
-  isHuntingCube: false,
-  cubeCage: null,
+  distance: 0,
+  distanceNeeded: 20,
+  width: 0, height: 0,
 
   init() {
-    this.bird.x = G.W() * 0.25;
-    this.bird.y = G.H() / 2;
-    this.bird.vy = 0;
-    this.bird.angle = 0;
+    this.width = G.W();
+    this.height = G.H();
+    this.x = this.width * 0.25;
+    this.y = this.height / 2;
+    this.vy = 0;
     this.pipes = [];
     this.pipeTimer = 0;
-    this.pipeSpeed = 3 + G.cycle * 0.4;
-    const bonusGap = Math.min(40, (G.carryover.shooterKills || 0) * 4);
-    this.gap = Math.max(100, 160 - G.cycle * 10 + bonusGap);
-    this.jumped = false;
-    this.pipesPassed = 0;
-    this.pipesNeeded = 5 + Math.floor(G.cycle * 1.2);
-    this.isHuntingCube = false;
-    this.cubeCage = null;
-  },
-
-  spawnPipe() {
-    const minY = 100;
-    const maxY = G.H() - 160;
-    const gapY = minY + Math.random() * (maxY - minY);
-    this.pipes.push({
-      x: G.W() + this.pipeW,
-      topH: gapY - this.gap / 2,
-      botY: gapY + this.gap / 2,
-      passed: false
-    });
-  },
-
-  spawnCubeCage() {
-    this.cubeCage = {
-        x: G.W() + 100,
-        y: Math.random() * (G.H() - 160) + 80
-    };
+    this.distance = 0;
+    const bonus = G.carryover.shooterKills || 0;
+    this.distanceNeeded = Math.max(10, 20 - Math.floor(bonus / 2));
+    G.carryover.flappyHeight = 0;
   },
 
   update() {
-    const jump = G.touchJump || G.keys['ArrowUp'] || G.keys['Space'];
-    if (jump && !this.jumped) {
-      this.bird.vy = this.jumpForce;
-      this.jumped = true;
-      spawnParticles(this.bird.x, this.bird.y, COLORS[4], 5);
-    }
-    if (!jump) this.jumped = false;
-
     const mod = G.currentMod;
-    let grav = this.gravity;
-    if (mod.name === 'ЛЕГКОСТЬ') grav *= 0.6;
-    
-    this.bird.vy += grav;
-    this.bird.y += this.bird.vy;
-    this.bird.angle = Math.max(-0.4, Math.min(0.6, this.bird.vy * 0.06));
+    let g = 0.4;
+    let jump = -6;
+    if (mod.name === 'ЛЕГКОСТЬ') { g = 0.28; jump = -5; }
+    if (mod.name === 'УСКОРЕНИЕ') { g = 0.55; }
 
-    let finalSpeed = this.pipeSpeed;
-    if (mod.name === 'УСКОРЕНИЕ') finalSpeed *= 1.4;
+    this.vy += g;
+    this.y += this.vy;
 
-    if (this.bird.y - this.bird.r < 0 || this.bird.y + this.bird.r > G.H() - 60) {
-      spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
+    if (G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump) {
+      if (this.vy > -2) this.vy = jump;
+    }
+
+    // Bounds
+    if (this.y < 0 || this.y > this.height) {
+      spawnParticles(this.x, this.y < 0 ? 0 : this.height, COLORS[4], 14);
       G.triggerMorph('death');
       return;
     }
 
+    // Pipes
     this.pipeTimer++;
-    if (this.pipeTimer > this.pipeInterval) {
+    const spawnRate = mod.name === 'УСКОРЕНИЕ' ? 70 : 100;
+    if (this.pipeTimer > spawnRate) {
       this.pipeTimer = 0;
-      this.spawnPipe();
+      const gap = 100 - Math.min(40, G.cycle * 6);
+      const topH = 60 + Math.random() * (this.height - gap - 140);
+      this.pipes.push({
+        x: this.width,
+        topH: topH,
+        gap: gap,
+        passed: false
+      });
     }
 
-    if (this.isHuntingCube && this.cubeCage) {
-       this.cubeCage.x -= finalSpeed;
-       const cc = this.cubeCage;
-       if (Math.hypot(cc.x - this.bird.x, cc.y - this.bird.y) < 35) {
-          spawnParticles(cc.x, cc.y, COLORS[0], 40);
+    const scroll = 2.5 + G.cycle * 0.3;
+    for (const p of this.pipes) {
+      p.x -= scroll;
+      if (!p.passed && p.x + 50 < this.x) {
+        p.passed = true;
+        this.distance++;
+        G.score += 50;
+        G.carryover.flappyHeight = this.distance * 10;
+        if (this.distance >= this.distanceNeeded) {
           G.triggerMorph('objective');
           return;
-       }
-       if (cc.x < -100) this.spawnCubeCage();
-    }
-
-    for (const p of this.pipes) {
-      p.x -= finalSpeed;
-      if (!p.passed && p.x + this.pipeW < this.bird.x) {
-        p.passed = true;
-        this.pipesPassed++;
-        G.score += 20;
-        spawnParticles(this.bird.x, this.bird.y, '#fbbf24', 4);
-        if (this.pipesPassed >= this.pipesNeeded && !this.isHuntingCube) {
-           this.isHuntingCube = true;
-           this.spawnCubeCage();
         }
       }
-      if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + this.pipeW) {
-        if (this.bird.y - this.bird.r < p.topH || this.bird.y + this.bird.r > p.botY) {
-          spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
+      // Collision
+      if (p.x < this.x + 8 && p.x + 50 > this.x - 8) {
+        if (this.y - 8 < p.topH || this.y + 8 > p.topH + p.gap) {
+          spawnParticles(this.x, this.y, COLORS[4], 16);
           G.triggerMorph('death');
           return;
         }
       }
     }
-    this.pipes = this.pipes.filter(p => p.x > -this.pipeW - 10);
-    G.score += 0.03;
+    this.pipes = this.pipes.filter(p => p.x > -60);
   },
 
-  draw(skipPlayer = false) {
+  draw() {
     const c = G.ctx;
-    const COL = COLORS[4];
+    const col = COLORS[4];
+
+    // Pipes
+    c.fillStyle = 'rgba(255,255,255,0.12)';
     for (const p of this.pipes) {
-      c.fillStyle = COL;
-      c.shadowColor = COL;
-      c.shadowBlur = 8;
-      c.fillRect(p.x, 0, this.pipeW, p.topH);
-      c.fillRect(p.x, p.botY, this.pipeW, G.H() - p.botY);
-      c.shadowBlur = 0;
-      c.fillStyle = COL;
-      c.globalAlpha = 0.7;
-      c.fillRect(p.x - 4, p.topH - 16, this.pipeW + 8, 16);
-      c.fillRect(p.x - 4, p.botY, this.pipeW + 8, 16);
-      c.globalAlpha = 1;
-    }
-    c.fillStyle = 'rgba(255,255,255,0.35)';
-    c.font = '11px Courier New';
-    c.textAlign = 'center';
-    c.fillText(this.pipesPassed + ' / ' + this.pipesNeeded + ' препятствий', G.W() / 2, 52);
-    c.textAlign = 'left';
-    c.fillRect(0, G.H() - 60, G.W(), 60);
-
-    if (this.isHuntingCube && this.cubeCage) {
-        const cc = this.cubeCage;
-        c.fillStyle = COLORS[0];
-        c.shadowColor = COLORS[0];
-        c.shadowBlur = 20;
-        c.fillRect(cc.x - 20, cc.y - 20, 40, 40);
-        c.shadowBlur = 0;
-        c.fillStyle = '#fff';
-        c.font = 'bold 12px Courier New';
-        c.textAlign = 'center';
-        c.fillText('ВЕРНИСЬ В ФОРМУ!', cc.x, cc.y - 30);
-        c.textAlign = 'left';
+      c.fillRect(p.x, 0, 50, p.topH);
+      c.fillRect(p.x, p.topH + p.gap, 50, this.height - p.topH - p.gap);
     }
 
-    if (skipPlayer) return;
-
+    // Soul / Bird
     c.save();
-    c.translate(this.bird.x, this.bird.y);
-    c.rotate(this.bird.angle);
-    c.fillStyle = COL;
-    c.shadowColor = COL;
-    c.shadowBlur = 16;
+    c.translate(this.x, this.y);
+    const rot = Math.atan2(this.vy, 8) * 0.5;
+    c.rotate(rot);
+
+    c.fillStyle = col;
+    c.shadowColor = col;
+    c.shadowBlur = 25;
     c.beginPath();
-    c.ellipse(0, 0, this.bird.r, this.bird.r * 0.75, 0, 0, Math.PI * 2);
+    c.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
     c.fill();
     c.shadowBlur = 0;
-    c.fillStyle = 'rgba(255,255,255,0.3)';
-    c.beginPath();
-    c.ellipse(-4, 2, 8, 5, -0.3, 0, Math.PI * 2);
-    c.fill();
+
+    // Eyes
     c.fillStyle = '#fff';
+    c.fillRect(4, -4, 3, 3);
+
+    // Wings (ethereal)
+    const wingFlap = Math.sin(Date.now() * 0.008) * 6;
+    c.fillStyle = 'rgba(255,255,255,0.35)';
     c.beginPath();
-    c.arc(6, -3, 4, 0, Math.PI * 2);
+    c.ellipse(-6, -2 + wingFlap, 14, 5, -0.4, 0, Math.PI * 2);
+    c.ellipse(6, -2 - wingFlap, 14, 5, 0.4, 0, Math.PI * 2);
     c.fill();
-    c.fillStyle = '#000';
-    c.beginPath();
-    c.arc(7, -3, 2, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = '#fbbf24';
-    c.beginPath();
-    c.moveTo(12, -1);
-    c.lineTo(18, 2);
-    c.lineTo(12, 5);
-    c.closePath();
-    c.fill();
+
+    if (G.evolutionFeatures.includes('aura')) {
+      c.strokeStyle = 'rgba(255,255,255,0.15)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.arc(0, 0, 28 + Math.sin(Date.now() * 0.003) * 4, 0, Math.PI * 2);
+      c.stroke();
+    }
+
     c.restore();
+
+    // UI
+    c.fillStyle = '#fff';
+    c.font = 'bold 14px Courier New';
+    c.textAlign = 'center';
+    c.fillText('ПРОЛЁТ: ' + this.distance + ' / ' + this.distanceNeeded, this.width / 2, 40);
+    c.textAlign = 'left';
   },
 
   getSnapshot() {
     return {
       mode: 4,
-      px: this.bird.x,
-      py: this.bird.y,
-      r: this.bird.r,
-      ang: this.bird.angle
+      px: this.x,
+      py: this.y,
+      w: this.w,
+      h: this.h
     };
   },
 
   drawSnapshot(snap, alpha, uMorph) {
     const c = G.ctx;
     const col = COLORS[4];
-    
     c.save();
     c.globalAlpha = alpha;
-    c.translate(snap.px, snap.py);
-    c.rotate(snap.ang || 0);
     c.fillStyle = col;
     c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 16;
-    
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 40 : 20;
+    const s = (snap.w || 20) * (0.9 + uMorph * 0.1);
     c.beginPath();
-    c.ellipse(0, 0, snap.r, snap.r * 0.75, 0, 0, Math.PI * 2);
+    c.ellipse(snap.px, snap.py, s * 0.6, s * 0.4, 0, 0, Math.PI * 2);
     c.fill();
     c.shadowBlur = 0;
-    
-    c.fillStyle = '#fbbf24';
-    c.beginPath();
-    c.moveTo(12, -1);
-    c.lineTo(18, 2);
-    c.lineTo(12, 5);
-    c.closePath();
-    c.fill();
-    
+    c.fillStyle = '#fff';
+    c.fillRect(snap.px + 3, snap.py - 4, 3, 3);
+    if (G.evolutionFeatures.includes('wings')) {
+      c.fillStyle = 'rgba(255,255,255,0.3)';
+      c.beginPath();
+      c.ellipse(snap.px - 14, snap.py - 2, 18, 6, -0.4, 0, Math.PI * 2);
+      c.ellipse(snap.px + 14, snap.py - 2, 18, 6, 0.4, 0, Math.PI * 2);
+      c.fill();
+    }
     c.restore();
   }
 };
