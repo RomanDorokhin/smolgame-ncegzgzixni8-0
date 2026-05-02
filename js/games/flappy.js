@@ -1,7 +1,8 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
-import { spawnParticles } from '../fx.js';
+import { spawnParticles, addTrail } from '../fx.js';
 import { boss } from './boss.js';
+import { playSound } from '../audio.js';
 
 export const flappy = {
   x: 0, y: 0, vy: 0,
@@ -28,17 +29,22 @@ export const flappy = {
 
   update() {
     const mod = G.currentMod;
-    let g = 0.4;
+    let g = 0.4 * (G.dt * 60);
     let jump = -6;
-    if (mod.name === 'ЛЕГКОСТЬ') { g = 0.28; jump = -5; }
-    if (mod.name === 'УСКОРЕНИЕ') { g = 0.55; }
+    if (mod.name === 'ЛЕГКОСТЬ') { g = 0.28 * (G.dt * 60); jump = -5; }
+    if (mod.name === 'УСКОРЕНИЕ') { g = 0.55 * (G.dt * 60); }
 
     this.vy += g;
-    this.y += this.vy;
+    this.y += this.vy * (G.dt * 60);
 
     if (G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump) {
-      if (this.vy > -2) this.vy = jump;
+      if (this.vy > -2) {
+        this.vy = jump;
+        playSound('jump');
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+      }
     }
+    addTrail(this.x, this.y, COLORS[4]);
 
     // Bounds
     if (this.y < 0 || this.y > this.height) {

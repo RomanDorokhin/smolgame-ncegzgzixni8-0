@@ -1,6 +1,6 @@
 import { G, resetCarryover, syncGameModeFromStage } from './gameState.js';
 import { bindInput } from './input.js';
-import { initStars, drawBg, updateParticles, drawParticles } from './fx.js';
+import { initStars, drawBg, updateParticles, drawParticles, updateTrails, drawTrails } from './fx.js';
 import { initCurrentGame, drawMorphTransition } from './morph.js';
 import { jumper } from './games/jumper.js';
 import { snake } from './games/snake.js';
@@ -8,6 +8,7 @@ import { arkanoid } from './games/arkanoid.js';
 import { shooter } from './games/shooter.js';
 import { flappy } from './games/flappy.js';
 import { boss } from './games/boss.js';
+import { playSound } from './audio.js';
 
 const GAMES = [jumper, snake, arkanoid, shooter, flappy];
 
@@ -23,9 +24,15 @@ if (window.Telegram && window.Telegram.WebApp) {
 }
 
 function loadBestScore() {
+  if (window.Telegram && window.Telegram.WebApp.CloudStorage) {
+    window.Telegram.WebApp.CloudStorage.getItem(LS_BEST, (err, v) => {
+      if (!err && v) G.bestScore = Math.max(G.bestScore, parseInt(v, 10) || 0);
+    });
+  }
+  // Fallback to local
   try {
     const v = localStorage.getItem(LS_BEST);
-    if (v != null) G.bestScore = Math.max(0, parseInt(v, 10) || 0);
+    if (v != null) G.bestScore = Math.max(G.bestScore, parseInt(v, 10) || 0);
   } catch (_) { /* ignore */ }
 }
 
@@ -33,6 +40,10 @@ function saveBestIfNeeded() {
   const s = Math.floor(G.score);
   if (s <= G.bestScore) return;
   G.bestScore = s;
+  
+  if (window.Telegram && window.Telegram.WebApp.CloudStorage) {
+    window.Telegram.WebApp.CloudStorage.setItem(LS_BEST, String(G.bestScore));
+  }
   try {
     localStorage.setItem(LS_BEST, String(G.bestScore));
   } catch (_) { /* ignore */ }
@@ -64,6 +75,25 @@ function hideAllOverlays() {
 function updateCurrent() {
   if (G.paused) return;
   
+  // Show Onboarding Hint
+  const hint = document.getElementById('mobileHint');
+  if (hint && G.running && !G.morphing) {
+    const texts = [
+      'ТАПНИ ДЛЯ ПРЫЖКА / СВАЙП ВЛЕВО-ВПРАВО',
+      'СВАЙПАЙ В 4 СТОРОНЫ ДЛЯ ПОВОРОТА',
+      'ДВИГАЙ ПЛАТФОРМУ ВЛЕВО-ВПРАВО',
+      'УДЕРЖИВАЙ И ДВИГАЙ ДЛЯ СТРЕЛЬБЫ',
+      'ТАПАЙ ДЛЯ ВЗЛЁТА'
+    ];
+    hint.textContent = texts[G.gameMode];
+    hint.classList.remove('hidden');
+    // Hide after 3s
+    if (!G.hintTimer) G.hintTimer = performance.now();
+    if (performance.now() - G.hintTimer > 3000) {
+      hint.classList.add('hidden');
+    }
+  }
+
   let mode = G.gameMode;
   if (G.morphing) {
     // During morphing, we transition control from morphFrom to morphTo
@@ -117,63 +147,57 @@ function drawEnv(mode) {
   }
 }
 
-function loop() {
+let lastTime = 0;
+function loop(timestamp) {
   if (!G.running) return;
   G.rafId = requestAnimationFrame(loop);
 
-  const c = G.ctx;
-  c.globalAlpha = 1;
-  c.globalCompositeOperation = 'source-over';
-  c.shadowBlur = 0;
+  if (!lastTime) lastTime = timestamp;
+  G.dt = Math.min((timestamp - lastTime) / (1000 / 60), 3);
+  lastTime = timestamp;
 
+  if (G.paused) return;
+
+  // 1. UPDATE
+  updateCurrent();
+  updateChaos();
+  updateParticles();
+  updateTrails();
+  if (G.cycle >= 5 && !G.isVictory) {
+    if (!G.bossInited) { boss.init(); G.bossInited = true; }
+    boss.update();
+  }
+
+  // 2. DRAW
+  const c = G.ctx;
   c.save();
-  // Apply screenshake
   if (G.shake > 0) {
-    const sx = (Math.random() - 0.5) * G.shake;
-    const sy = (Math.random() - 0.5) * G.shake;
-    c.translate(sx, sy);
+    c.translate((Math.random()-0.5)*G.shake, (Math.random()-0.5)*G.shake);
     G.shake *= 0.9;
     if (G.shake < 0.5) G.shake = 0;
   }
 
   drawBg();
+  drawTrails();
+  
   if (G.morphing) {
     G.morphT = Math.min(1, (performance.now() - G.morphStartReal) / G.morphDuration);
-  }
-  updateCurrent();
-  updateChaos();
-  
-  if (G.cycle >= 5 && G.running && !G.isVictory) {
-    if (!G.bossInited) {
-      boss.init();
-      G.bossInited = true;
+    drawCurrent(); // Draw env
+    drawMorphTransition(G.morphT);
+    if (G.morphT >= 1) {
+      G.morphing = false;
+      G.hintTimer = 0; // Reset hint timer on morph
     }
-    boss.update();
+  } else {
+    drawCurrent();
   }
 
-  drawCurrent();
-  if (G.cycle >= 5 && G.running && !G.isVictory) boss.draw();
-  
-  if (G.morphing) {
-    try {
-      drawMorphTransition(G.morphT);
-    } catch (e) {
-      console.error("Morph transition error:", e);
-      G.morphing = false; // Emergency stop
-    }
-    
-    // Peak of morph = screenshake!
-    if (G.morphT > 0.1 && G.morphT < 0.2 && G.shake < 5) G.shake = 15;
-    
-    if (G.morphT >= 1 || (performance.now() - G.morphStartReal > 5000)) {
-      G.morphing = false;
-      G.morphT = 1;
-    }
-  }
-  
-  updateParticles();
+  if (G.cycle >= 5 && !G.isVictory) boss.draw();
   drawParticles();
 
+  c.restore();
+
+  // 3. UI
   document.getElementById('score').textContent = Math.floor(G.score);
   saveBestIfNeeded();
   updateBestLine();
@@ -297,7 +321,7 @@ function shareScore() {
   if (!window.Telegram || !window.Telegram.WebApp) return;
   const dur = Math.floor((performance.now() - G.runStartTime) / 1000);
   const text = `Я ВЫРВАЛСЯ ИЗ ЦИКЛА МЕТАМОРФОЗЫ! 🧬✨\nВремя: ${Math.floor(dur/60)}м ${dur%60}с\nСмертей: ${G.runDeathCount}\nПопробуй превзойти мой результат! 🔥`;
-  const url = 'https://t.me/share/url?url=' + encodeURIComponent('https://romandorohin.github.io/metamorphosis_game/') + '&text=' + encodeURIComponent(text);
+  const url = 'https://t.me/share/url?url=' + encodeURIComponent('https://t.me/MetamorphosisGameBot/play') + '&text=' + encodeURIComponent(text);
   window.Telegram.WebApp.openTelegramLink(url);
 }
 
@@ -336,6 +360,10 @@ window.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('touchstart', e => {
   if (e.touches.length > 1) e.preventDefault(); // Block multi-touch zoom
 }, { passive: false });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) G.paused = true;
+});
 
 const startBtn = document.getElementById('startBtn');
 if (startBtn) startBtn.addEventListener('click', startGame);

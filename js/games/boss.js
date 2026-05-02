@@ -43,8 +43,14 @@ export const boss = {
 
   damage(amt) {
     this.hp -= amt;
+    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    }
     if (this.hp <= 0) {
       this.hp = 0;
+      if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
       G.showVictory();
     }
   },
@@ -52,34 +58,71 @@ export const boss = {
   draw() {
     const c = G.ctx;
     const w = this.width;
+    const h = this.height;
     
+    // Boss Silhouette (Shadow Reflection)
+    c.save();
+    c.globalAlpha = 0.15;
+    c.fillStyle = '#fff';
+    c.shadowColor = COLORS[G.gameMode];
+    c.shadowBlur = 40;
+    
+    const time = performance.now() * 0.002;
+    const ox = Math.sin(time) * 20;
+    const oy = Math.cos(time * 0.5) * 10;
+    
+    c.translate(w / 2 + ox, h / 3 + oy);
+    const scale = 8 + Math.sin(time * 0.5) * 0.5;
+    c.scale(scale, scale);
+    
+    // Draw boss as a large version of current form
+    import('./' + ['jumper','snake','arkanoid','shooter','flappy'][G.gameMode] + '.js').then(m => {
+       // Note: Dynamic import in draw is slow, but we'll use a cached version or simplified shape
+    });
+    
+    // Simplified Boss Shape (Abstract)
+    c.beginPath();
+    c.arc(0, 0, 20, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
     // Boss Health Bar
     const barW = 300;
-    const barH = 10;
+    const barH = 6;
     const bx = (w - barW) / 2;
-    const by = 60;
+    const by = 40;
     
-    c.fillStyle = 'rgba(255,255,255,0.1)';
+    c.fillStyle = 'rgba(255,255,255,0.05)';
     c.fillRect(bx, by, barW, barH);
     
     const fillW = (this.hp / this.maxHp) * barW;
     c.fillStyle = '#fff';
-    c.shadowColor = '#fff';
-    c.shadowBlur = 15;
     c.fillRect(bx, by, fillW, barH);
-    c.shadowBlur = 0;
     
-    c.fillStyle = '#fff';
-    c.font = 'bold 10px Courier New';
+    c.fillStyle = 'rgba(255,255,255,0.5)';
+    c.font = '10px Courier New';
     c.textAlign = 'center';
-    c.fillText('СТРАЖ ЦИКЛА', w / 2, by - 10);
+    c.fillText('СТРАЖ ЦИКЛА', w / 2, by - 8);
   },
 
+  hazards: [],
   spawnBossHazard() {
-    // Logic for jumper hazards
+    this.hazards.push({
+      x: Math.random() * G.W(),
+      y: -20,
+      vy: 4 + Math.random() * 4,
+      r: 10
+    });
   },
   
   spawnBossProjectile() {
-    // Logic for shooter backfire
+    this.hazards.push({
+      x: G.W() / 2,
+      y: 100,
+      vx: (Math.random() - 0.5) * 10,
+      vy: 5,
+      r: 6
+    });
   }
 };
+

@@ -1,7 +1,8 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
-import { spawnParticles } from '../fx.js';
+import { spawnParticles, addTrail } from '../fx.js';
 import { boss } from './boss.js';
+import { playSound } from '../audio.js';
 
 export const shooter = {
   x: 0, y: 0, w: 28, h: 28,
@@ -40,15 +41,22 @@ export const shooter = {
     const fireRate = mod.name === 'УСКОРЕНИЕ' ? 12 : 18;
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const isMovingMobile = isMobile && (G.keys['ArrowLeft'] || G.keys['ArrowRight']);
-    
-    if ((G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump || isMovingMobile) && this.spawnTimer > fireRate) {
-      this.spawnTimer = 0;
-      this.bullets.push({ x: this.x, y: this.y - 14, vy: -8 });
+    this.y += this.vy * G.dt;
+    if (this.y < 0) this.y = 0;
+    if (this.y > G.H() - this.h) this.y = G.H() - this.h;
+
+    addTrail(this.x + this.w / 2, this.y + this.h / 2, COLORS[3]);
+
+    if (this.shotTimer > 0) this.shotTimer -= G.dt;
+    if (this.shotTimer <= 0 && (G.keys['ArrowUp'] || G.keys['Space'] || (isMovingMobile && G.isMobile))) {
+      this.bullets.push({ x: this.x + this.w / 2, y: this.y, vy: -10 });
+      this.shotTimer = 10;
+      playSound('shoot');
     }
 
-    // Bullets
-    for (const b of this.bullets) b.y += b.vy;
-    this.bullets = this.bullets.filter(b => b.y > -20);
+    for (const b of this.bullets) {
+      b.y += b.vy * G.dt;
+    }this.bullets = this.bullets.filter(b => b.y > -20);
 
     // Spawn enemies
     if (Math.random() < 0.02 + G.cycle * 0.003) {

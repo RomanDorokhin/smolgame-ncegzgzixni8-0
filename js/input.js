@@ -7,8 +7,34 @@ export function bindInput(canvas) {
   }
 
   // Key handlers
-  window.addEventListener('keydown', e => { G.keys[e.code] = true; });
-  window.addEventListener('keyup', e => { G.keys[e.code] = false; });
+  window.addEventListener('keydown', e => { 
+    let code = e.code;
+    if (G.currentMod.name === 'ИНВЕРСИЯ') {
+      if (code === 'ArrowLeft') code = 'ArrowRight';
+      else if (code === 'ArrowRight') code = 'ArrowLeft';
+      else if (code === 'ArrowUp') code = 'ArrowDown';
+      else if (code === 'ArrowDown') code = 'ArrowUp';
+      else if (code === 'KeyA') code = 'KeyD';
+      else if (code === 'KeyD') code = 'KeyA';
+      else if (code === 'KeyW') code = 'KeyS';
+      else if (code === 'KeyS') code = 'KeyW';
+    }
+    G.keys[code] = true; 
+  });
+  window.addEventListener('keyup', e => { 
+    let code = e.code;
+    if (G.currentMod.name === 'ИНВЕРСИЯ') {
+      if (code === 'ArrowLeft') code = 'ArrowRight';
+      else if (code === 'ArrowRight') code = 'ArrowLeft';
+      else if (code === 'ArrowUp') code = 'ArrowDown';
+      else if (code === 'ArrowDown') code = 'ArrowUp';
+      else if (code === 'KeyA') code = 'KeyD';
+      else if (code === 'KeyD') code = 'KeyA';
+      else if (code === 'KeyW') code = 'KeyS';
+      else if (code === 'KeyS') code = 'KeyW';
+    }
+    G.keys[code] = false; 
+  });
 
   // Touch state
   let touchStartX = 0;
@@ -41,8 +67,15 @@ export function bindInput(canvas) {
     if (G.paused || !G.running) return;
     e.preventDefault();
     const t = e.touches[0];
-    const dx = t.clientX - touchStartX;
-    const dy = t.clientY - touchStartY;
+    let dx = t.clientX - touchStartX;
+    let dy = t.clientY - touchStartY;
+    let moveX = t.clientX - lastTouchX;
+
+    if (G.currentMod.name === 'ИНВЕРСИЯ') {
+      dx = -dx;
+      dy = -dy;
+      moveX = -moveX;
+    }
     
     // Swipe for Snake (1) or Jumper (0)
     if (G.gameMode === 0 || G.gameMode === 1) {
@@ -65,7 +98,6 @@ export function bindInput(canvas) {
     }
 
     if (G.gameMode === 2 || G.gameMode === 3) {
-      const moveX = t.clientX - lastTouchX;
       if (moveX > 2) { G.keys['ArrowRight'] = true; G.keys['ArrowLeft'] = false; }
       else if (moveX < -2) { G.keys['ArrowLeft'] = true; G.keys['ArrowRight'] = false; }
       else { G.keys['ArrowLeft'] = false; G.keys['ArrowRight'] = false; }
@@ -83,10 +115,45 @@ export function bindInput(canvas) {
   function setupBtn(id, code) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); G.keys[code] = true; if(code==='ArrowUp') G.touchJump=true; }, { passive: false });
-    el.addEventListener('touchend', (e) => { e.preventDefault(); G.keys[code] = false; G.touchJump=false; }, { passive: false });
-    el.addEventListener('mousedown', () => { G.keys[code] = true; if(code==='ArrowUp') G.touchJump=true; });
-    el.addEventListener('mouseup', () => { G.keys[code] = false; G.touchJump=false; });
+    
+    let actualCode = code;
+    
+    el.addEventListener('touchstart', (e) => { 
+      e.preventDefault(); 
+      if (G.currentMod.name === 'ИНВЕРСИЯ') {
+        if (code === 'ArrowLeft') actualCode = 'ArrowRight';
+        else if (code === 'ArrowRight') actualCode = 'ArrowLeft';
+        else if (code === 'ArrowUp') actualCode = 'ArrowDown';
+        else if (code === 'ArrowDown') actualCode = 'ArrowUp';
+      } else {
+        actualCode = code;
+      }
+      G.keys[actualCode] = true; 
+      if(actualCode==='ArrowUp') G.touchJump=true; 
+    }, { passive: false });
+
+    el.addEventListener('touchend', (e) => { 
+      e.preventDefault(); 
+      G.keys[actualCode] = false; 
+      G.touchJump=false; 
+    }, { passive: false });
+
+    el.addEventListener('mousedown', () => { 
+      if (G.currentMod.name === 'ИНВЕРСИЯ') {
+        if (code === 'ArrowLeft') actualCode = 'ArrowRight';
+        else if (code === 'ArrowRight') actualCode = 'ArrowLeft';
+        else if (code === 'ArrowUp') actualCode = 'ArrowDown';
+        else if (code === 'ArrowDown') actualCode = 'ArrowUp';
+      } else {
+        actualCode = code;
+      }
+      G.keys[actualCode] = true; 
+      if(actualCode==='ArrowUp') G.touchJump=true; 
+    });
+    el.addEventListener('mouseup', () => { 
+      G.keys[actualCode] = false; 
+      G.touchJump=false; 
+    });
   }
   setupBtn('btnUp', 'ArrowUp');
   setupBtn('btnDown', 'ArrowDown');

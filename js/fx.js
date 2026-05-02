@@ -74,6 +74,30 @@ export function drawParticles() {
   c.globalAlpha = 1;
 }
 
+export function addTrail(x, y, color) {
+  if (!G.evolutionFeatures.includes('trails')) return;
+  G.trails.push({ x, y, color, life: 1 });
+}
+
+export function updateTrails() {
+  G.trails = G.trails.filter(t => t.life > 0);
+  for (const t of G.trails) {
+    t.life -= 0.05 * G.dt;
+  }
+}
+
+export function drawTrails() {
+  const c = ctx();
+  for (const t of G.trails) {
+    c.globalAlpha = t.life * 0.3;
+    c.fillStyle = t.color;
+    c.beginPath();
+    c.arc(t.x, t.y, 10 * t.life, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.globalAlpha = 1;
+}
+
 export function initStars() {
   G.bgStars = [];
   for (let i = 0; i < 80; i++) {

@@ -1,7 +1,8 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
-import { spawnParticles } from '../fx.js';
+import { spawnParticles, addTrail } from '../fx.js';
 import { boss } from './boss.js';
+import { playSound } from '../audio.js';
 
 export const arkanoid = {
   paddleX: 0, paddleY: 0, paddleW: 100, paddleH: 14,
@@ -50,38 +51,39 @@ export const arkanoid = {
   },
 
   update() {
-    const mod = G.currentMod;
-    let spdMult = 1;
-    if (mod.name === 'УСКОРЕНИЕ') spdMult = 1.25;
+    const speed = 7 * G.dt;
+    if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.paddleX -= speed;
+    if (G.keys['ArrowRight'] || G.keys['KeyD']) this.paddleX += speed;
 
-    // Paddle movement
-    if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.paddleX -= 7;
-    if (G.keys['ArrowRight'] || G.keys['KeyD']) this.paddleX += 7;
-    this.paddleX = Math.max(0, Math.min(this.width - this.paddleW, this.paddleX));
+    if (this.paddleX < 0) this.paddleX = 0;
+    if (this.paddleX > G.W() - this.paddleW) this.paddleX = G.W() - this.paddleW;
 
-    // Ball
-    this.ballX += this.ballVX * spdMult;
-    this.ballY += this.ballVY * spdMult;
+    this.ballX += this.ballVX * G.dt;
+    this.ballY += this.ballVY * G.dt;
+
+    addTrail(this.ballX, this.ballY, COLORS[2]);
 
     // Walls
-    if (this.ballX < this.ballR || this.ballX > this.width - this.ballR) this.ballVX *= -1;
-    if (this.ballY < this.ballR) this.ballVY *= -1;
+    if (this.ballX < this.ballR || this.ballX > G.W() - this.ballR) {
+      this.ballVX *= -1;
+      playSound('shoot');
+    }
+    if (this.ballY < this.ballR) {
+      this.ballVY *= -1;
+      playSound('shoot');
+    }
 
-    // Paddle collision
-    if (
-      this.ballY + this.ballR >= this.paddleY &&
-      this.ballY - this.ballR <= this.paddleY + this.paddleH &&
-      this.ballX >= this.paddleX &&
-      this.ballX <= this.paddleX + this.paddleW &&
-      this.ballVY > 0
-    ) {
-      const hit = (this.ballX - this.paddleX) / this.paddleW - 0.5;
-      this.ballVY = -Math.abs(this.ballVY);
-      this.ballVX += hit * 4;
+    // Paddle
+    if (this.ballVY > 0 && 
+        this.ballY + this.ballR > this.paddleY &&
+        this.ballX > this.paddleX && this.ballX < this.paddleX + this.paddleW) {
+      this.ballVY *= -1;
+      this.ballY = this.paddleY - this.ballR;
+      playSound('jump');
     }
 
     // Death
-    if (this.ballY > this.height + 20) {
+    if (this.ballY > G.H() + 50) {
       spawnParticles(this.ballX, this.height - 10, COLORS[2], 14);
       G.triggerMorph('death');
       return;
@@ -102,6 +104,10 @@ export const arkanoid = {
         G.carryover.bricksCleared = this.bricksCleared;
         G.score += 50;
         if (G.cycle >= 5) boss.damage(5);
+        playSound('collect');
+        if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+          window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
         spawnParticles(b.x + b.w / 2, b.y + b.h / 2, b.color, 8);
         if (this.bricksCleared >= this.bricksNeeded) {
           G.triggerMorph('objective');

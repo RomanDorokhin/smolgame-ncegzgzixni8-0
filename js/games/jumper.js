@@ -1,88 +1,97 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
-import { spawnParticles } from '../fx.js';
+import { spawnParticles, addTrail } from '../fx.js';
+import { playSound } from '../audio.js';
 import { boss } from './boss.js';
 
 export const jumper = {
   x: 0, y: 0, vx: 0, vy: 0,
-  w: 30, h: 30,
+  w: 36, h: 36,
   grounded: false,
-  platforms: [],
-  crystals: [],
-  crystalsNeeded: 5,
-  crystalsCollected: 0,
   camY: 0,
-  gravity: 0.5,
-  jumpStr: -10,
-  speed: 5,
-  width: 0, height: 0,
+  crystals: [],
+  platforms: [],
+  crystalsCollected: 0,
+  crystalsNeeded: 5,
 
   init() {
-    this.width = G.W();
-    this.height = G.H();
-    this.x = this.width / 2;
-    this.y = this.height - 120;
+    this.x = G.W() / 2 - 18;
+    this.y = G.H() - 100;
     this.vx = 0; this.vy = 0;
-    this.grounded = false;
-    this.camY = 0;
-    this.crystalsCollected = 0;
-    const bonus = G.carryover.flappyHeight || 0;
-    this.crystalsNeeded = Math.max(3, 5 - Math.floor(bonus / 50));
-    this.platforms = [];
+    this.camY = this.y - G.H() * 0.7;
     this.crystals = [];
-    for (let i = 0; i < 12; i++) this.spawnPlatform(i);
-  },
+    this.platforms = [];
+    this.crystalsCollected = 0;
+    this.crystalsNeeded = 5 + G.cycle * 2;
 
-  spawnPlatform(idx) {
-    const y = this.height - 80 - idx * 70;
-    const w = 80 + Math.random() * 60;
-    const x = Math.random() * (this.width - w);
-    this.platforms.push({ x, y, w, h: 12 });
-    if (idx > 0 && Math.random() < 0.6) {
-      this.crystals.push({
-        x: x + w / 2 - 8,
-        y: y - 20,
-        w: 16, h: 16,
-        collected: false,
-        pulse: Math.random() * 6
+    // Start platform
+    this.platforms.push({ x: this.x - 50, y: this.y + 40, w: 140, h: 20 });
+    
+    // Gen platforms
+    let curY = this.y - 100;
+    for (let i = 0; i < 40; i++) {
+      const pw = 80 + Math.random() * 60;
+      this.platforms.push({
+        x: Math.random() * (G.W() - pw),
+        y: curY,
+        w: pw,
+        h: 15
       });
+      if (Math.random() < 0.4) {
+        this.crystals.push({
+          x: this.platforms[this.platforms.length - 1].x + pw / 2 - 8,
+          y: curY - 30,
+          w: 16, h: 16,
+          collected: false,
+          pulse: Math.random() * 10
+        });
+      }
+      curY -= 120 + Math.random() * 40;
     }
   },
 
   update() {
-    const mod = G.currentMod;
-    let g = this.gravity;
-    if (mod.name === 'ЛЕГКОСТЬ') g *= 0.7;
+    const g = 0.4 * G.dt;
+    const speed = 5 * G.dt;
+    const jump = -11;
 
-    if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.vx = -this.speed;
-    else if (G.keys['ArrowRight'] || G.keys['KeyD']) this.vx = this.speed;
+    if (G.keys['ArrowLeft']) this.vx = -speed;
+    else if (G.keys['ArrowRight']) this.vx = speed;
     else this.vx *= 0.8;
-
-    if ((G.keys['ArrowUp'] || G.keys['Space'] || G.touchJump) && this.grounded) {
-      this.vy = this.jumpStr;
-      this.grounded = false;
-    }
 
     this.vy += g;
     this.x += this.vx;
-    this.y += this.vy;
+    this.y += this.vy * G.dt;
 
+    if (G.touchJump && this.grounded) {
+      this.vy = jump;
+      this.grounded = false;
+      playSound('jump');
+    }
+    if (G.keys['ArrowUp'] && this.grounded) {
+      this.vy = jump;
+      this.grounded = false;
+      playSound('jump');
+    }
+
+    addTrail(this.x + 18, this.y + 18, COLORS[0]);
+
+    // Bounds
+    if (this.x < 0) this.x = 0;
+    if (this.x > G.W() - this.w) this.x = G.W() - this.w;
+
+    // Platforms
     this.grounded = false;
     for (const p of this.platforms) {
-      if (
-        this.x + this.w / 2 > p.x &&
-        this.x - this.w / 2 < p.x + p.w &&
-        this.y + this.h / 2 >= p.y &&
-        this.y + this.h / 2 <= p.y + p.h + 10 &&
-        this.vy >= 0
-      ) {
-        this.y = p.y - this.h / 2;
+      if (this.vy > 0 && 
+          this.x + this.w > p.x && this.x < p.x + p.w &&
+          this.y + this.h > p.y && this.y + this.h < p.y + p.h + this.vy * G.dt + 2) {
+        this.y = p.y - this.h;
         this.vy = 0;
         this.grounded = true;
       }
     }
 
-    if (this.x < 0) this.x = this.width;
     if (this.x > this.width) this.x = 0;
 
     // Camera follow upward

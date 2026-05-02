@@ -465,17 +465,30 @@ function drawMorphTransition(uRaw) {
   }
 }
 
-function triggerMorph(reason) {
+export function triggerMorph(reason) {
   if (G.morphing) return;
+  
+  // Cooldown check (8 seconds), but ignore for death
+  const now = performance.now();
+  if (reason !== 'death' && G.lastMorphRealTime && (now - G.lastMorphRealTime < 8000)) {
+    return;
+  }
+
   G.morphing = true;
   G.morphFrom = G.gameMode;
   G.runMorphCount++;
   if (reason === 'death') {
     G.runDeathCount++;
-    if (navigator.vibrate) navigator.vibrate(100);
+    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+    }
   }
 
+  // Morph Sound
+  import('./audio.js').then(m => m.playSound('morph'));
+
   G.lastMorphReason = reason;
+  G.lastMorphRealTime = performance.now();
   const pick = pickMorphStyle(reason);
   G.morphStyle = pick.style;
   G.morphDuration = pick.ms;

@@ -160,6 +160,10 @@ export const snake = {
       if (piece.isMeal) {
         G.score += 50;
         if (G.cycle >= 5) boss.damage(5);
+        playSound('collect');
+        if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+          window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+        }
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 12);
         if (piece.isGolden) {
           G.carryover.snakeMeals = 20; 
@@ -170,6 +174,7 @@ export const snake = {
         }
       } else {
         G.score += 15;
+        playSound('collect');
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#ef4444', 6);
       }
 
