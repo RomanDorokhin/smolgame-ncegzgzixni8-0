@@ -44,18 +44,23 @@ export function bindInput(canvas) {
     const dx = t.clientX - touchStartX;
     const dy = t.clientY - touchStartY;
     
-    if (G.gameMode === 1) {
-      const threshold = 30;
+    // Swipe for Snake (1) or Jumper (0)
+    if (G.gameMode === 0 || G.gameMode === 1) {
+      const threshold = 20;
       if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
         if (Math.abs(dx) > Math.abs(dy)) {
-          if (dx > 0) G.keys['ArrowRight'] = true; else G.keys['ArrowLeft'] = true;
-          G.keys['ArrowUp'] = false; G.keys['ArrowDown'] = false;
-        } else {
-          if (dy > 0) G.keys['ArrowDown'] = true; else G.keys['ArrowUp'] = true;
+          if (dx > 0) { G.keys['ArrowRight'] = true; G.keys['ArrowLeft'] = false; } 
+          else { G.keys['ArrowLeft'] = true; G.keys['ArrowRight'] = false; }
+          if (G.gameMode === 1) { G.keys['ArrowUp'] = false; G.keys['ArrowDown'] = false; }
+        } else if (G.gameMode === 1) {
+          if (dy > 0) { G.keys['ArrowDown'] = true; G.keys['ArrowUp'] = false; } 
+          else { G.keys['ArrowUp'] = true; G.keys['ArrowDown'] = false; }
           G.keys['ArrowLeft'] = false; G.keys['ArrowRight'] = false;
         }
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
+        if (G.gameMode === 1) {
+          touchStartX = t.clientX;
+          touchStartY = t.clientY;
+        }
       }
     }
 

@@ -7,6 +7,7 @@ import { snake } from './games/snake.js';
 import { arkanoid } from './games/arkanoid.js';
 import { shooter } from './games/shooter.js';
 import { flappy } from './games/flappy.js';
+import { boss } from './games/boss.js';
 
 const GAMES = [jumper, snake, arkanoid, shooter, flappy];
 
@@ -134,7 +135,17 @@ function loop() {
   }
   updateCurrent();
   updateChaos();
+  
+  if (G.cycle >= 5 && G.running && !G.isVictory) {
+    if (!G.bossInited) {
+      boss.init();
+      G.bossInited = true;
+    }
+    boss.update();
+  }
+
   drawCurrent();
+  if (G.cycle >= 5 && G.running && !G.isVictory) boss.draw();
   
   if (G.morphing) {
     try {
@@ -248,27 +259,7 @@ function loop() {
   }
 }
 
-function startGame() {
-  document.getElementById('overlay').style.display = 'none';
-  const pauseEl = document.getElementById('pauseHint');
-  if (pauseEl) pauseEl.style.display = 'none';
 
-  cancelAnimationFrame(G.rafId);
-  G.running = true;
-  G.paused = false;
-  G.morphing = false;
-  G.score = 0;
-  G.cycle = 0;
-  G.stageIndex = 0;
-  G.runMorphCount = 0;
-  G.runDeathCount = 0;
-  resetCarryover();
-  syncGameModeFromStage();
-  loadBestScore();
-  initStars();
-  initCurrentGame();
-  G.rafId = requestAnimationFrame(loop);
-}
 
 function showVictory() {
   G.running = false;
@@ -330,7 +321,7 @@ function resize() {
 loadBestScore();
 resize();
 window.addEventListener('resize', resize);
-bindInput(G.canvas);
+if (G.canvas) bindInput(G.canvas);
 
 // Block context menu and long-press
 window.addEventListener('contextmenu', e => e.preventDefault());
@@ -338,9 +329,14 @@ document.addEventListener('touchstart', e => {
   if (e.touches.length > 1) e.preventDefault(); // Block multi-touch zoom
 }, { passive: false });
 
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('shareBtn').addEventListener('click', shareScore);
-document.getElementById('endlessBtn').addEventListener('click', startEndless);
+const startBtn = document.getElementById('startBtn');
+if (startBtn) startBtn.addEventListener('click', startGame);
+
+const shareBtn = document.getElementById('shareBtn');
+if (shareBtn) shareBtn.addEventListener('click', shareScore);
+
+const endlessBtn = document.getElementById('endlessBtn');
+if (endlessBtn) endlessBtn.addEventListener('click', startEndless);
 
 function startGame() {
   G.score = 0;
@@ -352,10 +348,18 @@ function startGame() {
   G.runStartTime = performance.now();
   G.isVictory = false;
   G.isEndless = false;
+  G.bossInited = false;
   resetCarryover();
   
-  document.getElementById('overlay').classList.add('hidden');
-  document.getElementById('victoryOverlay').classList.add('hidden');
+  const overlay = document.getElementById('overlay');
+  if (overlay) overlay.classList.add('hidden');
+  
+  const vOverlay = document.getElementById('victoryOverlay');
+  if (vOverlay) vOverlay.classList.add('hidden');
+  
+  const pauseHint = document.getElementById('pauseHint');
+  if (pauseHint) pauseHint.classList.add('hidden');
+
   G.running = true;
   initCurrentGame();
   loop();

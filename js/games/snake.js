@@ -1,6 +1,7 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
+import { boss } from './boss.js';
 
 export const snake = {
   body: [],
@@ -158,6 +159,7 @@ export const snake = {
       
       if (piece.isMeal) {
         G.score += 50;
+        if (G.cycle >= 5) boss.damage(5);
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 12);
         if (piece.isGolden) {
           G.carryover.snakeMeals = 20; 

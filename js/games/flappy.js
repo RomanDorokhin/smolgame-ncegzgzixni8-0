@@ -1,6 +1,7 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
+import { boss } from './boss.js';
 
 export const flappy = {
   x: 0, y: 0, vy: 0,
@@ -68,6 +69,7 @@ export const flappy = {
         p.passed = true;
         this.distance++;
         G.score += 50;
+        if (G.cycle >= 5) boss.damage(5);
         G.carryover.flappyHeight = this.distance * 10;
         if (this.distance >= this.distanceNeeded) {
           G.triggerMorph('objective');

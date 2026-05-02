@@ -110,12 +110,6 @@ export function advanceStageAfterMorph() {
   if (G.stageIndex === 0) {
     G.cycle++;
     resetCarryover();
-    
-    // Victory check: If 5 cycles are completed (Cycle goes from 4 to 5)
-    if (G.cycle === 5 && !G.isEndless) {
-      if (G.showVictory) G.showVictory();
-      return;
-    }
   }
   syncGameModeFromStage();
 }

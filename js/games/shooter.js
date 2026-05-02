@@ -1,6 +1,7 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
+import { boss } from './boss.js';
 
 export const shooter = {
   x: 0, y: 0, w: 28, h: 28,
@@ -86,6 +87,7 @@ export const shooter = {
           this.kills++;
           G.carryover.shooterKills = this.kills;
           G.score += 75;
+          if (G.cycle >= 5) boss.damage(5);
           spawnParticles(e.x, e.y, COLORS[3], 12);
           if (this.kills >= this.killsNeeded) {
             G.triggerMorph('objective');

@@ -1,6 +1,7 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
+import { boss } from './boss.js';
 
 export const jumper = {
   x: 0, y: 0, vx: 0, vy: 0,
@@ -98,6 +99,7 @@ export const jumper = {
         c.collected = true;
         this.crystalsCollected++;
         G.score += 100;
+        if (G.cycle >= 5) boss.damage(5);
         G.carryover.jumperCrystals = this.crystalsCollected;
         spawnParticles(c.x + 8, c.y + 8, COLORS[0], 10);
         if (this.crystalsCollected >= this.crystalsNeeded) {

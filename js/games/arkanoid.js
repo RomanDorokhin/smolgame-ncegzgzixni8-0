@@ -1,6 +1,7 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
+import { boss } from './boss.js';
 
 export const arkanoid = {
   paddleX: 0, paddleY: 0, paddleW: 100, paddleH: 14,
@@ -100,6 +101,7 @@ export const arkanoid = {
         this.bricksCleared++;
         G.carryover.bricksCleared = this.bricksCleared;
         G.score += 50;
+        if (G.cycle >= 5) boss.damage(5);
         spawnParticles(b.x + b.w / 2, b.y + b.h / 2, b.color, 8);
         if (this.bricksCleared >= this.bricksNeeded) {
           G.triggerMorph('objective');
