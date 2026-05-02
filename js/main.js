@@ -218,6 +218,16 @@ function loop() {
       ctrlEl.classList.add('hidden');
     }
   }
+
+  // Show/Hide Shooter fire button
+  const fireEl = document.getElementById('fireBtn');
+  if (fireEl) {
+    if (G.gameMode === 3 && !G.morphing && G.running && !G.paused) {
+      fireEl.classList.remove('hidden');
+    } else {
+      fireEl.classList.add('hidden');
+    }
+  }
 }
 
 function startGame() {

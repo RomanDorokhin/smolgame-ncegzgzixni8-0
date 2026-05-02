@@ -91,4 +91,5 @@ export function bindInput(canvas) {
   setupBtn('btnDown', 'ArrowDown');
   setupBtn('btnLeft', 'ArrowLeft');
   setupBtn('btnRight', 'ArrowRight');
+  setupBtn('fireBtn', 'Space');
 }
