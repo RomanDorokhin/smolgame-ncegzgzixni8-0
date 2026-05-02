@@ -110,8 +110,11 @@ export const jumper = {
         if (Math.sqrt(dx * dx + dy * dy) < 22) {
           p.crystalTaken = true;
           G.score += 25;
+          G.carryover.jumperCrystals++;
           spawnParticles(p.crystalX, p.crystalY, '#a78bfa', 14);
-          this.tryObjectiveMorph();
+          if (G.carryover.jumperCrystals >= 3) {
+            this.tryObjectiveMorph();
+          }
           return;
         }
       }
@@ -208,6 +211,7 @@ export const jumper = {
     c.textAlign = 'right';
     const rd = Math.min(100, Math.floor((this.runDistance / this.runThreshold) * 100));
     c.fillText(rd + '% пути', G.W() - 14, 52);
+    c.fillText(G.carryover.jumperCrystals + ' / 3 кристаллов', G.W() - 14, 70);
     c.textAlign = 'left';
   }
 };

@@ -187,6 +187,35 @@ export function drawMorphTransition(uRaw) {
   const aFrom = G.morphStyle === 'flash' ? (uRaw < 0.5 ? 0.95 : 0.08) : (1 - u) * 0.92;
   const aTo = G.morphStyle === 'flash' ? (uRaw < 0.5 ? 0.1 : 0.95) : u * 0.92;
   drawMorphShapeAt(G.morphSnapshotFrom, aFrom, uRaw);
+
+  // Hybrid moments
+  if (uRaw > 0.3 && uRaw < 0.7) {
+    if (G.morphFrom === 0 && G.morphTo === 1) {
+      // Jumper -> Snake: trail
+      c.save();
+      c.strokeStyle = COLORS[1];
+      c.lineWidth = 10;
+      c.globalAlpha = 0.4;
+      c.beginPath();
+      c.moveTo(ax - 50, ay);
+      c.lineTo(ax, ay);
+      c.stroke();
+      c.restore();
+    } else if (G.morphFrom === 1 && G.morphTo === 2) {
+      // Snake -> Arkanoid: head as ball
+      c.fillStyle = '#fff';
+      c.beginPath();
+      c.arc(ax, ay, 12, 0, Math.PI * 2);
+      c.fill();
+    } else if (G.morphFrom === 2 && G.morphTo === 3) {
+      // Arkanoid -> Shooter: ball splits
+      c.fillStyle = '#fff';
+      for (let i = 0; i < 3; i++) {
+        c.fillRect(ax - 20 + i * 20, ay - 10, 4, 10);
+      }
+    }
+  }
+
   drawMorphShapeAt(G.morphSnapshotTo, aTo, uRaw);
 
   c.save();

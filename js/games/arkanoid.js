@@ -18,6 +18,7 @@ export const arkanoid = {
     this.bricksJustCleared = false;
     this.fieldW = G.W() - 40;
     this.fieldX = 20;
+    this.paddle.w = 90 + (G.carryover.snakeMeals || 0) * 8;
     this.paddle.x = G.W() / 2 - this.paddle.w / 2;
     this.paddle.y = G.H() - 100;
     this.brickW = Math.floor((this.fieldW - (this.brickCols + 1) * this.brickPad) / this.brickCols);
@@ -99,6 +100,7 @@ export const arkanoid = {
     }
 
     if (this.bricks.length === 0) {
+      G.carryover.bricksCleared = true;
       spawnParticles(G.W() / 2, this.fieldY + 60, '#fff', 24);
       this.bricksJustCleared = true;
       triggerMorph('objective');

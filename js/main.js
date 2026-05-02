@@ -1,4 +1,4 @@
-import { G, shuffleMidStages, syncGameModeFromStage } from './gameState.js';
+import { G, resetCarryover, syncGameModeFromStage } from './gameState.js';
 import { bindInput } from './input.js';
 import { initStars, drawBg, updateParticles, drawParticles } from './fx.js';
 import { initCurrentGame, drawMorphTransition } from './morph.js';
@@ -98,6 +98,23 @@ function loop() {
     c.letterSpacing = '2px';
     c.fillText('ЦИКЛ ' + G.cycle, G.W() / 2 - 24, G.H() - 8);
   }
+
+  // Carryover display
+  c.fillStyle = 'rgba(255,255,255,0.4)';
+  c.font = '10px Courier New';
+  let yPos = 120;
+  if (G.carryover.jumperCrystals > 0) {
+    c.fillText('КРИСТАЛЛЫ: +' + G.carryover.jumperCrystals, 20, yPos);
+    yPos += 15;
+  }
+  if (G.carryover.snakeMeals > 0) {
+    c.fillText('РАЗМЕР: +' + G.carryover.snakeMeals, 20, yPos);
+    yPos += 15;
+  }
+  if (G.carryover.bricksCleared) {
+    c.fillText('ЩИТ: АКТИВЕН', 20, yPos);
+    yPos += 15;
+  }
 }
 
 function startGame() {
@@ -114,7 +131,7 @@ function startGame() {
   G.stageIndex = 0;
   G.runMorphCount = 0;
   G.runDeathCount = 0;
-  shuffleMidStages();
+  resetCarryover();
   syncGameModeFromStage();
   loadBestScore();
   initStars();

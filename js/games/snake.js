@@ -28,14 +28,15 @@ export const snake = {
     this.body = [];
     const cx = Math.floor(this.gridW / 2);
     const cy = Math.floor(this.gridH / 2);
-    for (let i = 3; i >= 0; i--) this.body.push({ x: cx - i, y: cy });
+    const bonus = G.carryover.jumperCrystals || 0;
+    for (let i = 4 + bonus; i >= 0; i--) this.body.push({ x: cx - i, y: cy });
     this.dir = { x: 1, y: 0 };
     this.nextDir = { x: 1, y: 0 };
     this.food = [];
     this.mealsEaten = 0;
     this.mealsNeeded = 4 + Math.floor(G.cycle * 0.5);
     this.timer = 0;
-    this.speed = 6 + G.cycle;
+    this.speed = Math.max(1, 6 - Math.floor(G.cycle * 0.8));
     this.spawnFood();
     this.spawnFood();
     this.ensureMealsOnField();
@@ -112,6 +113,7 @@ export const snake = {
         G.score += 30;
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 12);
         if (this.mealsEaten >= this.mealsNeeded) {
+          G.carryover.snakeMeals = this.mealsEaten;
           spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 22);
           triggerMorph('objective');
           return;

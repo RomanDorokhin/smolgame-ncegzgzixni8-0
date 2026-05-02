@@ -38,17 +38,24 @@ export const G = {
   runDeathCount: 0,
   bestScore: 0,
 
+  carryover: {
+    jumperCrystals: 0,
+    snakeMeals: 0,
+    bricksCleared: 0,
+    shooterKills: 0,
+  },
+
   MODES,
   COLORS,
 };
 
-export function shuffleMidStages() {
-  const m = [1, 2, 3];
-  for (let i = m.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [m[i], m[j]] = [m[j], m[i]];
-  }
-  G.stageOrder = [0, m[0], m[1], m[2], 4];
+export function resetCarryover() {
+  G.carryover = {
+    jumperCrystals: 0,
+    snakeMeals: 0,
+    bricksCleared: 0,
+    shooterKills: 0,
+  };
 }
 
 export function syncGameModeFromStage() {
@@ -59,7 +66,8 @@ export function advanceStageAfterMorph() {
   G.stageIndex = (G.stageIndex + 1) % 5;
   if (G.stageIndex === 0) {
     G.cycle++;
-    shuffleMidStages();
+    // We keep fixed order now: [0, 1, 2, 3, 4]
+    resetCarryover();
   }
   syncGameModeFromStage();
 }

@@ -25,6 +25,8 @@ export const shooter = {
     this.kills = 0;
     this.killsNeeded = 6 + G.cycle * 2;
     this.bossMaxHP = 20 + G.cycle * 5;
+    this.hasShield = G.carryover.bricksCleared || false;
+    this.shieldHP = 3;
   },
 
   spawnEnemy() {
@@ -101,6 +103,7 @@ export const shooter = {
           if (this.boss.hp <= 0) {
             spawnParticles(this.boss.x + 40, this.boss.y + 30, '#fff', 30);
             G.score += 200;
+            G.carryover.shooterKills = this.kills;
             triggerMorph('objective');
             return;
           }
@@ -129,6 +132,13 @@ export const shooter = {
     for (const e of this.enemies) {
       if (e.x + e.w > this.ship.x && e.x < this.ship.x + this.ship.w &&
           e.y + e.h > this.ship.y && e.y < this.ship.y + this.ship.h) {
+        if (this.hasShield && this.shieldHP > 0) {
+          this.shieldHP--;
+          if (this.shieldHP <= 0) this.hasShield = false;
+          this.enemies.splice(this.enemies.indexOf(e), 1);
+          spawnParticles(this.ship.x + 15, this.ship.y + 20, '#3b82f6', 10);
+          continue;
+        }
         spawnParticles(this.ship.x + 15, this.ship.y + 20, COLORS[3], 20);
         triggerMorph('death');
         return;
@@ -196,6 +206,18 @@ export const shooter = {
     c.closePath();
     c.fill();
     c.shadowBlur = 0;
+
+    if (this.hasShield) {
+      c.strokeStyle = '#3b82f6';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(this.ship.x + 15, this.ship.y + 20, 35, 0, Math.PI * 2);
+      c.stroke();
+      c.globalAlpha = 0.2;
+      c.fillStyle = '#3b82f6';
+      c.fill();
+      c.globalAlpha = 1;
+    }
     if (!this.boss) {
       const pct = Math.min(this.kills / this.killsNeeded, 1);
       c.fillStyle = 'rgba(255,255,255,0.1)';
