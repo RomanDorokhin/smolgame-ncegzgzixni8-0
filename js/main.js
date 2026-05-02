@@ -144,19 +144,29 @@ function loop() {
     
     // Peak of morph = screenshake!
     if (G.morphT > 0.1 && G.morphT < 0.2 && G.shake < 5) G.shake = 15;
+    
+    let msg = "";
+    if (G.morphFrom === 2 && G.morphTo === 3) msg = "БЛОКИ \u2192 ЗАЩИТА";
+    if (msg) {
+      c.save();
+      c.fillStyle = '#fff';
+      c.textAlign = 'center';
+      c.fillText(msg, G.W()/2, G.H()/2 - 120);
+      c.restore();
+    }
 
     if (G.morphT >= 1 || (performance.now() - G.morphStartReal > 5000)) {
       G.morphing = false;
       G.morphT = 1;
     }
   }
+  
   updateParticles();
   drawParticles();
 
   document.getElementById('score').textContent = Math.floor(G.score);
   saveBestIfNeeded();
   updateBestLine();
-
 
   if (G.cycle > 0) {
     c.fillStyle = 'rgba(255,255,255,0.2)';
@@ -185,6 +195,16 @@ function loop() {
     c.fillText('УБИЙСТВА: +' + G.carryover.shooterKills, 20, yPos);
     yPos += 15;
   }
+
+  // Target goal
+  c.fillStyle = 'rgba(255,255,255,0.6)';
+  c.font = 'bold 12px Courier New';
+  c.textAlign = 'center';
+  c.fillText('ЦЕЛЬ: ДОСТИГНИ ЦИКЛА 5', G.W() / 2, 40);
+  c.textAlign = 'left';
+
+  c.restore();
+}
 
   // Modifier display
   const mod = G.currentMod;
