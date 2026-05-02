@@ -52,6 +52,13 @@ function updateBestLine() {
   el.textContent = parts.join(' · ');
 }
 
+function hideAllOverlays() {
+  ['overlay', 'victoryOverlay', 'pauseHint', 'mobileHint'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+}
+
 
 
 function updateCurrent() {
@@ -262,6 +269,7 @@ function loop() {
 
 
 function showVictory() {
+  hideAllOverlays();
   G.running = false;
   G.isVictory = true;
   cancelAnimationFrame(G.rafId);
@@ -339,6 +347,7 @@ const endlessBtn = document.getElementById('endlessBtn');
 if (endlessBtn) endlessBtn.addEventListener('click', startEndless);
 
 function startGame() {
+  hideAllOverlays();
   G.score = 0;
   G.cycle = 0;
   G.stageIndex = 0;
@@ -351,15 +360,7 @@ function startGame() {
   G.bossInited = false;
   resetCarryover();
   
-  const overlay = document.getElementById('overlay');
-  if (overlay) overlay.classList.add('hidden');
-  
-  const vOverlay = document.getElementById('victoryOverlay');
-  if (vOverlay) vOverlay.classList.add('hidden');
-  
-  const pauseHint = document.getElementById('pauseHint');
-  if (pauseHint) pauseHint.classList.add('hidden');
-
+  cancelAnimationFrame(G.rafId);
   G.running = true;
   initCurrentGame();
   loop();
