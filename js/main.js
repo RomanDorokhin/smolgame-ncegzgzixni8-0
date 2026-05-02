@@ -2,6 +2,7 @@ import { G, resetCarryover, syncGameModeFromStage } from './gameState.js';
 import { bindInput } from './input.js';
 import { initStars, drawBg, updateParticles, drawParticles } from './fx.js';
 import { initCurrentGame, drawMorphTransition } from './morph.js';
+import { triggerMorph } from './actions.js';
 import { jumper } from './games/jumper.js';
 import { snake } from './games/snake.js';
 import { arkanoid } from './games/arkanoid.js';
@@ -68,12 +69,11 @@ function updateCurrent() {
 }
 
 let chaosTimer = 0;
-async function updateChaos() {
+function updateChaos() {
   if (G.currentMod.name === 'ХАОС' && !G.morphing && G.running) {
     chaosTimer++;
     if (chaosTimer > 60 * 15) { // Every 15s
       chaosTimer = 0;
-      const { triggerMorph } = await import('./actions.js');
       triggerMorph('chaos');
     }
   } else {
