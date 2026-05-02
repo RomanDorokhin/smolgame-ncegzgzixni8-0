@@ -29,7 +29,7 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
   }
 }
 
-export function drawMorphTransition(uRaw) {
+function drawMorphTransition(uRaw) {
   const c = G.ctx;
   const u = easeMorphT(uRaw, G.morphStyle);
   const snapFrom = G.morphSnapshotFrom || { mode: 0, px: G.W()/2, py: G.H()/2 };
