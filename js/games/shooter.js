@@ -37,7 +37,10 @@ export const shooter = {
     // Shoot
     this.spawnTimer++;
     const fireRate = mod.name === 'УСКОРЕНИЕ' ? 12 : 18;
-    if ((G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump) && this.spawnTimer > fireRate) {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isMovingMobile = isMobile && (G.keys['ArrowLeft'] || G.keys['ArrowRight']);
+    
+    if ((G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump || isMovingMobile) && this.spawnTimer > fireRate) {
       this.spawnTimer = 0;
       this.bullets.push({ x: this.x, y: this.y - 14, vy: -8 });
     }

@@ -470,7 +470,10 @@ function triggerMorph(reason) {
   G.morphing = true;
   G.morphFrom = G.gameMode;
   G.runMorphCount++;
-  if (reason === 'death') G.runDeathCount++;
+  if (reason === 'death') {
+    G.runDeathCount++;
+    if (navigator.vibrate) navigator.vibrate(100);
+  }
 
   G.lastMorphReason = reason;
   const pick = pickMorphStyle(reason);

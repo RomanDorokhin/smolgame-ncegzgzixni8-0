@@ -45,11 +45,7 @@ function updateBestLine() {
   el.textContent = parts.join(' · ');
 }
 
-function resize() {
-  G.canvas.width = window.innerWidth;
-  G.canvas.height = window.innerHeight;
-  if (G.running && !G.morphing && !G.paused) initCurrentGame();
-}
+
 
 function updateCurrent() {
   if (G.paused) return;
@@ -209,11 +205,15 @@ function loop() {
 
   c.restore();
 
-  // Show/Hide Snake controls
+  // Show/Hide Game controls
   const ctrlEl = document.getElementById('controls');
   if (ctrlEl) {
-    if (G.gameMode === 1 && !G.morphing && G.running && !G.paused) {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const needsDpad = (G.gameMode === 0 || G.gameMode === 1);
+    if (needsDpad && isMobile && !G.morphing && G.running && !G.paused) {
       ctrlEl.classList.remove('hidden');
+      // Hide up/down in Snake if we want, but D-pad usually needs all.
+      // For Jumper, we only need Left/Right? No, D-pad is fine.
     } else {
       ctrlEl.classList.add('hidden');
     }
@@ -227,6 +227,18 @@ function loop() {
     } else {
       fireEl.classList.add('hidden');
     }
+  }
+
+  // Mobile Jump Hint
+  const hintEl = document.getElementById('mobileHint');
+  if (hintEl) {
+    const isJumpMode = (G.gameMode === 0 || G.gameMode === 4);
+    if (isJumpMode && G.running && !G.morphing && !G._hintShown) {
+      hintEl.classList.remove('hidden');
+      G._hintShown = true;
+      setTimeout(() => { hintEl.classList.add('hidden'); }, 3000);
+    }
+    if (!isJumpMode) G._hintShown = false;
   }
 }
 
