@@ -190,7 +190,6 @@ export const arkanoid = {
         c.fillText('ПОЙМАЙ ЯДРО!', G.W()/2, sc.y - 10);
         c.textAlign = 'left';
     }
-    }
   },
 
   getSnapshot() {
