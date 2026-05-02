@@ -203,9 +203,6 @@ function loop() {
   c.fillText('ЦЕЛЬ: ДОСТИГНИ ЦИКЛА 5', G.W() / 2, 40);
   c.textAlign = 'left';
 
-  c.restore();
-}
-
   // Modifier display
   const mod = G.currentMod;
   if (mod && mod.name !== 'НОРМА') {
@@ -215,6 +212,7 @@ function loop() {
     c.fillText(mod.name + ': ' + mod.desc, G.W() - 20, G.H() - 30);
     c.textAlign = 'left';
   }
+
   c.restore();
 }
 
