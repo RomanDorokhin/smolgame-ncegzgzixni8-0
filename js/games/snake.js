@@ -137,28 +137,29 @@ export const snake = {
     if (fi !== -1) {
       const piece = this.food[fi];
       this.food.splice(fi, 1);
+      
+      this.mealsEaten++; // Every piece counts now
+      
       if (piece.isMeal) {
-        this.mealsEaten++;
-        G.score += 30;
+        G.score += 50;
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 12);
-        
         if (piece.isGolden) {
-          G.carryover.snakeMeals = 15; // Max bonus
-          G.score += 500;
+          G.carryover.snakeMeals = 20; 
+          G.score += 1000;
           spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fbbf24', 40);
-          triggerMorph('objective');
-          return;
-        }
-
-        if (this.mealsEaten >= this.mealsNeeded) {
-          G.carryover.snakeMeals = this.mealsEaten;
-          spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 22);
           triggerMorph('objective');
           return;
         }
       } else {
         G.score += 15;
-        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fbbf24', 6);
+        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#ef4444', 6);
+      }
+
+      if (this.mealsEaten >= this.mealsNeeded) {
+        G.carryover.snakeMeals = this.mealsEaten;
+        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 25);
+        triggerMorph('objective');
+        return;
       }
       this.spawnFood();
       ate = true;
@@ -180,10 +181,13 @@ export const snake = {
     c.strokeRect(fx, fy, this.fieldW, this.fieldH);
     c.globalAlpha = 1;
 
-    c.fillStyle = 'rgba(255,255,255,0.35)';
-    c.font = '11px Courier New';
+    c.fillStyle = '#fff';
+    c.font = 'bold 14px Courier New';
     c.textAlign = 'center';
-    c.fillText(this.mealsEaten + ' / ' + this.mealsNeeded + ' объектов', G.W() / 2, fy - 10);
+    c.shadowColor = COL;
+    c.shadowBlur = 10;
+    c.fillText('ПОГЛОЩЕНИЕ: ' + this.mealsEaten + ' / ' + this.mealsNeeded, G.W() / 2, fy - 15);
+    c.shadowBlur = 0;
     c.textAlign = 'left';
 
     for (const f of this.food) {

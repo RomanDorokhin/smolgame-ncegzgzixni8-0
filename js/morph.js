@@ -81,7 +81,12 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     const s = 1 + Math.sin(uMorph * Math.PI) * 0.15;
     c.fillStyle = col;
     c.shadowColor = col;
-    c.shadowBlur = 20;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 40 : 20;
+    if (G.evolutionFeatures.includes('aura')) {
+        c.strokeStyle = 'rgba(255,255,255,0.4)';
+        c.lineWidth = 2;
+        c.strokeRect(snap.px - (snap.w * s) / 2 - 5, snap.py - (snap.h * s) / 2 - 5, snap.w * s + 10, snap.h * s + 10);
+    }
     c.fillRect(snap.px - (snap.w * s) / 2, snap.py - (snap.h * s) / 2, snap.w * s, snap.h * s);
     c.shadowBlur = 0;
     c.fillStyle = '#fff';
@@ -98,7 +103,7 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     c.lineCap = 'round';
     c.lineJoin = 'round';
     c.shadowColor = col;
-    c.shadowBlur = 12;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 12;
     c.beginPath();
     c.moveTo(segs[0].x, segs[0].y);
     for (let i = 1; i < segs.length; i++) c.lineTo(segs[i].x, segs[i].y);
@@ -108,10 +113,18 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     c.fillStyle = '#fff';
     c.fillRect(head.x - 5, head.y - 5, 4, 4);
     c.fillRect(head.x + 1, head.y - 5, 4, 4);
+    
+    if (G.evolutionFeatures.includes('wings')) {
+        c.fillStyle = 'rgba(255,255,255,0.3)';
+        c.beginPath();
+        c.ellipse(head.x - 10, head.y - 10, 15, 5, -0.5, 0, Math.PI*2);
+        c.ellipse(head.x + 10, head.y - 10, 15, 5, 0.5, 0, Math.PI*2);
+        c.fill();
+    }
   } else if (snap.mode === 2) {
     c.fillStyle = col;
     c.shadowColor = col;
-    c.shadowBlur = 14;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 14;
     c.fillRect(snap.paddleX, snap.paddleY, snap.paddleW, snap.paddleH);
     c.fillStyle = '#fff';
     c.beginPath();
@@ -123,7 +136,7 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     const y = snap.py - snap.h / 2;
     c.fillStyle = col;
     c.shadowColor = col;
-    c.shadowBlur = 18;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 35 : 18;
     c.beginPath();
     c.moveTo(snap.px, y);
     c.lineTo(x + snap.w, y + snap.h);
@@ -139,7 +152,7 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     c.rotate(snap.ang || 0);
     c.fillStyle = col;
     c.shadowColor = col;
-    c.shadowBlur = 16;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 16;
     c.beginPath();
     c.ellipse(0, 0, snap.r, snap.r * 0.75, 0, 0, Math.PI * 2);
     c.fill();

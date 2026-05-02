@@ -57,6 +57,16 @@ export const G = {
     return this.modifiers[Math.min(this.cycle, this.modifiers.length - 1)];
   },
 
+  /** Визуальные признаки эволюции */
+  get evolutionFeatures() {
+    const features = [];
+    if (this.cycle >= 1) features.push('glow');   // Свечение
+    if (this.cycle >= 2) features.push('trails'); // Шлейф
+    if (this.cycle >= 3) features.push('wings');  // Крылья (визуально)
+    if (this.cycle >= 4) features.push('aura');   // Аура силы
+    return features;
+  },
+
   MODES,
   COLORS,
 };
