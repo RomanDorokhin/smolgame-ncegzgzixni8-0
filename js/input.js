@@ -1,7 +1,6 @@
 import { G } from './gameState.js';
 
 export function bindInput(canvas) {
-  const G = window.G;
   if (!G) return;
 
   // Key handlers
