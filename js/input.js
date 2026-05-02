@@ -67,4 +67,28 @@ export function bindInput(canvas) {
       G.keys['ArrowRight'] = false;
     }
   });
+
+  // D-pad button support (specifically for Snake)
+  function setupBtn(id, code) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const press = (e) => {
+      e.preventDefault();
+      G.keys[code] = true;
+      if (code === 'ArrowUp') G.touchJump = true;
+    };
+    const release = (e) => {
+      e.preventDefault();
+      G.keys[code] = false;
+      if (code === 'ArrowUp') G.touchJump = false;
+    };
+    el.addEventListener('touchstart', press, { passive: false });
+    el.addEventListener('touchend', release, { passive: false });
+    el.addEventListener('mousedown', press);
+    el.addEventListener('mouseup', release);
+  }
+  setupBtn('btnUp', 'ArrowUp');
+  setupBtn('btnDown', 'ArrowDown');
+  setupBtn('btnLeft', 'ArrowLeft');
+  setupBtn('btnRight', 'ArrowRight');
 }

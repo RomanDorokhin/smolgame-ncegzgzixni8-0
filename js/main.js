@@ -208,6 +208,16 @@ function loop() {
   }
 
   c.restore();
+
+  // Show/Hide Snake controls
+  const ctrlEl = document.getElementById('controls');
+  if (ctrlEl) {
+    if (G.gameMode === 1 && !G.morphing && G.running && !G.paused) {
+      ctrlEl.classList.remove('hidden');
+    } else {
+      ctrlEl.classList.add('hidden');
+    }
+  }
 }
 
 function startGame() {
