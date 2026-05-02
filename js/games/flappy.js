@@ -16,6 +16,8 @@ export const flappy = {
   gravity: 0.45,
   jumpForce: -8,
   jumped: false,
+  isHuntingCube: false,
+  cubeCage: null,
 
   init() {
     this.bird.x = G.W() * 0.25;
@@ -30,6 +32,8 @@ export const flappy = {
     this.jumped = false;
     this.pipesPassed = 0;
     this.pipesNeeded = 5 + Math.floor(G.cycle * 1.2);
+    this.isHuntingCube = false;
+    this.cubeCage = null;
   },
 
   spawnPipe() {
@@ -42,6 +46,13 @@ export const flappy = {
       botY: gapY + this.gap / 2,
       passed: false
     });
+  },
+
+  spawnCubeCage() {
+    this.cubeCage = {
+        x: G.W() + 100,
+        y: Math.random() * (G.H() - 160) + 80
+    };
   },
 
   update() {
@@ -76,6 +87,17 @@ export const flappy = {
       this.spawnPipe();
     }
 
+    if (this.isHuntingCube && this.cubeCage) {
+       this.cubeCage.x -= finalSpeed;
+       const cc = this.cubeCage;
+       if (Math.hypot(cc.x - this.bird.x, cc.y - this.bird.y) < 35) {
+          spawnParticles(cc.x, cc.y, COLORS[0], 40);
+          triggerMorph('objective');
+          return;
+       }
+       if (cc.x < -100) this.spawnCubeCage();
+    }
+
     for (const p of this.pipes) {
       p.x -= finalSpeed;
       if (!p.passed && p.x + this.pipeW < this.bird.x) {
@@ -83,10 +105,9 @@ export const flappy = {
         this.pipesPassed++;
         G.score += 20;
         spawnParticles(this.bird.x, this.bird.y, '#fbbf24', 4);
-        if (this.pipesPassed >= this.pipesNeeded) {
-          spawnParticles(this.bird.x, this.bird.y, '#fff', 28);
-          triggerMorph('objective');
-          return;
+        if (this.pipesPassed >= this.pipesNeeded && !this.isHuntingCube) {
+           this.isHuntingCube = true;
+           this.spawnCubeCage();
         }
       }
       if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + this.pipeW) {
@@ -123,6 +144,20 @@ export const flappy = {
     c.fillText(this.pipesPassed + ' / ' + this.pipesNeeded + ' препятствий', G.W() / 2, 52);
     c.textAlign = 'left';
     c.fillRect(0, G.H() - 60, G.W(), 60);
+
+    if (this.isHuntingCube && this.cubeCage) {
+        const cc = this.cubeCage;
+        c.fillStyle = COLORS[0];
+        c.shadowColor = COLORS[0];
+        c.shadowBlur = 20;
+        c.fillRect(cc.x - 20, cc.y - 20, 40, 40);
+        c.shadowBlur = 0;
+        c.fillStyle = '#fff';
+        c.font = 'bold 12px Courier New';
+        c.textAlign = 'center';
+        c.fillText('ВЕРНИСЬ В ФОРМУ!', cc.x, cc.y - 30);
+        c.textAlign = 'left';
+    }
 
     if (skipPlayer) return;
 

@@ -13,6 +13,8 @@ export const shooter = {
   enemyTimer: 0,
   kills: 0,
   killsNeeded: 8,
+  isHuntingBird: false,
+  birdPrey: null,
 
   init() {
     this.ship.x = G.W() / 2 - 15;
@@ -20,11 +22,13 @@ export const shooter = {
     this.bullets = [];
     this.enemies = [];
     this.boss = null;
+    this.isHuntingBird = false;
+    this.birdPrey = null;
     this.shootTimer = 0;
     this.enemyTimer = 0;
     this.kills = 0;
     this.killsNeeded = 6 + G.cycle * 2;
-    this.bossMaxHP = 20 + G.cycle * 5;
+    this.bossMaxHP = 20 + G.cycle * 10;
     this.hasShield = G.carryover.bricksCleared || false;
     this.shieldHP = 3;
   },
@@ -37,6 +41,10 @@ export const shooter = {
       vy: 1.5 + Math.random() * 1.5 + G.cycle * 0.3,
       hp: 1
     });
+  },
+
+  spawnBirdPrey(x, y) {
+    this.birdPrey = { x, y };
   },
 
   update() {
@@ -65,7 +73,7 @@ export const shooter = {
       this.bullets.push({ x: this.ship.x + this.ship.w / 2, y: this.ship.y, vy: -10, r: 4 });
     }
 
-    if (!this.boss) {
+    if (!this.boss && !this.isHuntingBird) {
       this.enemyTimer++;
       if (this.enemyTimer > Math.max(40 - G.cycle * 3, 15)) {
         this.enemyTimer = 0;
@@ -104,21 +112,30 @@ export const shooter = {
       }
     }
 
+    if (this.isHuntingBird && this.birdPrey) {
+       const bp = this.birdPrey;
+       bp.y += 1;
+       if (Math.hypot(bp.x - (this.ship.x + 15), bp.y - (this.ship.y + 20)) < 30) {
+          G.carryover.shooterKills = this.kills;
+          spawnParticles(bp.x, bp.y, COLORS[4], 40);
+          triggerMorph('objective');
+          return;
+       }
+    }
+
     for (let bi = this.bullets.length - 1; bi >= 0; bi--) {
       const b = this.bullets[bi];
       if (this.boss) {
         if (b.x > this.boss.x && b.x < this.boss.x + 80 && b.y > this.boss.y && b.y < this.boss.y + 60) {
           this.boss.hp--;
-          this.boss.flash = 5;
+          this.boss.flash = 3;
           this.bullets.splice(bi, 1);
           G.score += 5;
-          spawnParticles(b.x, b.y, COLORS[3], 4);
           if (this.boss.hp <= 0) {
-            spawnParticles(this.boss.x + 40, this.boss.y + 30, '#fff', 30);
-            G.score += 200;
-            G.carryover.shooterKills = this.kills;
-            triggerMorph('objective');
-            return;
+            spawnParticles(this.boss.x + 40, this.boss.y + 30, COLORS[3], 50);
+            this.isHuntingBird = true;
+            this.spawnBirdPrey(this.boss.x + 40, this.boss.y + 30);
+            this.boss = null;
           }
           continue;
         }
@@ -208,8 +225,15 @@ export const shooter = {
       }
     }
     
+    if (this.isHuntingBird && this.birdPrey) {
+        c.fillStyle = COLORS[4];
+        c.beginPath();
+        c.arc(this.birdPrey.x, this.birdPrey.y, 10, 0, Math.PI * 2);
+        c.fill();
+    }
+
     if (skipPlayer) {
-      if (!this.boss) {
+      if (!this.boss && !this.isHuntingBird) {
         const pct = Math.min(this.kills / this.killsNeeded, 1);
         c.fillStyle = 'rgba(255,255,255,0.1)';
         c.fillRect(G.W() / 2 - 60, 44, 120, 6);

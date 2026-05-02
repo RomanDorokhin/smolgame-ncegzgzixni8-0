@@ -23,6 +23,8 @@ export const arkanoid = {
     this.paddle.y = G.H() - 100;
     this.brickW = Math.floor((this.fieldW - (this.brickCols + 1) * this.brickPad) / this.brickCols);
     this.bricks = [];
+    this.isHuntingShooter = false;
+    this.shipCore = null;
     const rows = 3 + G.cycle;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < this.brickCols; c++) {
@@ -108,18 +110,38 @@ export const arkanoid = {
           this.ball.vy *= 1.2;
           spawnParticles(b.x + b.w / 2, b.y + b.h / 2, '#fff', 20);
         }
-        if (b.hp <= 0) this.bricks.splice(i, 1);
+        if (b.hp <= 0) {
+          this.bricks.splice(i, 1);
+          if (this.bricks.length === 0) {
+             this.isHuntingShooter = true;
+             this.spawnShipCore();
+          }
+        }
       }
     }
 
-    if (this.bricks.length === 0) {
-      G.carryover.bricksCleared = true;
-      spawnParticles(G.W() / 2, this.fieldY + 60, '#fff', 24);
-      this.bricksJustCleared = true;
-      triggerMorph('objective');
+    if (this.isHuntingShooter && this.shipCore) {
+       this.shipCore.y += 3;
+       const sc = this.shipCore;
+       if (sc.y + sc.h > this.paddle.y && sc.x + sc.w > this.paddle.x && sc.x < this.paddle.x + this.paddle.w) {
+          G.carryover.bricksCleared = true;
+          spawnParticles(sc.x + sc.w/2, sc.y + sc.h/2, COLORS[3], 40);
+          triggerMorph('objective');
+          return;
+       }
+       if (sc.y > G.H()) this.spawnShipCore(); // Respawn if missed
     }
 
     G.score += 0.01;
+  },
+
+  spawnShipCore() {
+    this.shipCore = {
+        x: G.W() / 2 - 20,
+        y: 100,
+        w: 40,
+        h: 40
+    };
   },
 
   draw(skipPlayer = false) {
@@ -149,5 +171,25 @@ export const arkanoid = {
     c.arc(this.ball.x, this.ball.y, this.ball.r, 0, Math.PI * 2);
     c.fill();
     c.shadowBlur = 0;
+
+    if (this.isHuntingShooter && this.shipCore) {
+        const sc = this.shipCore;
+        c.fillStyle = COLORS[3];
+        c.shadowColor = COLORS[3];
+        c.shadowBlur = 20;
+        c.beginPath();
+        c.moveTo(sc.x + sc.w/2, sc.y);
+        c.lineTo(sc.x + sc.w, sc.y + sc.h);
+        c.lineTo(sc.x, sc.y + sc.h);
+        c.closePath();
+        c.fill();
+        c.shadowBlur = 0;
+        
+        c.fillStyle = '#fff';
+        c.font = 'bold 12px Courier New';
+        c.textAlign = 'center';
+        c.fillText('ПОЙМАЙ ЯДРО!', G.W()/2, sc.y - 10);
+        c.textAlign = 'left';
+    }
   }
 };

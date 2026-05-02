@@ -13,6 +13,9 @@ export const jumper = {
   runDistance: 0,
   runThreshold: 2000,
   morphQueued: false,
+  crystalsTaken: 0,
+  crystalsNeeded: 3,
+  isHuntingSnake: false,
 
   init() {
     this.morphQueued = false;
@@ -21,6 +24,9 @@ export const jumper = {
     this.vy = 0;
     this.onGround = false;
     this.jumpPressed = false;
+    this.crystalsTaken = 0;
+    this.crystalsNeeded = 3;
+    this.isHuntingSnake = false;
     this.platforms = [];
     this.scrollSpeed = 2 + G.cycle * 0.4;
     this.runDistance = 0;
@@ -28,35 +34,37 @@ export const jumper = {
     const groundY = G.H() - 80;
     this.platforms.push({ x: -G.W(), y: groundY, w: G.W() * 3, h: 20, color: '#333' });
     for (let i = 0; i < 8; i++) {
-      this.platforms.push(this.newPlatform(G.W() * 0.4 + i * 180));
+      this.platforms.push(this.newPlatform(G.W() * 0.4 + i * 180, i === 0));
     }
   },
 
-  newPlatform(x) {
-    const groundY = G.H() - 80;
-    const y = groundY - 80 - Math.random() * 200;
-    const hasGap = Math.random() < 0.3;
-    const w = hasGap ? 0 : 80 + Math.random() * 80;
-    const roll = Math.random();
-    let hasCrystal = false;
-    let hasBeacon = false;
-    if (!hasGap && w > 40) {
-      if (roll < 0.38) hasCrystal = true;
-      else if (roll < 0.58) hasBeacon = true;
-    }
-    return {
-      x, y, w, h: 14,
-      color: COLORS[0],
-      isGap: hasGap,
-      hasCrystal,
-      crystalX: x + w * 0.5,
-      crystalY: y - 24,
-      crystalTaken: false,
-      hasBeacon,
-      beaconX: x + w * 0.5,
-      beaconY: y - 36,
-      beaconTaken: false
+  newPlatform(x, isFirst = false, last = null) {
+    const isGap = !isFirst && Math.random() < 0.25;
+    const p = {
+      x: last ? last.x + 150 + Math.random() * 100 : x,
+      y: last ? Math.max(150, Math.min(G.H() - 150, last.y + (Math.random() - 0.5) * 200)) : G.H() - 160,
+      w: isFirst ? 400 : 80 + Math.random() * 80,
+      h: 15,
+      isGap,
+      color: isGap ? '#333' : COLORS[0],
+      hasCrystal: !isGap && !isFirst && Math.random() < 0.3,
+      crystalX: 0, crystalY: 0, crystalTaken: false,
+      hasBeacon: !isGap && !isFirst && Math.random() < 0.05,
+      beaconX: 0, beaconY: 0, beaconTaken: false,
+      hasSnakeEgg: this.isHuntingSnake && !isGap && Math.random() < 0.1
     };
+    if (p.hasCrystal) {
+        p.crystalX = p.x + p.w * 0.5;
+        p.crystalY = p.y - 24;
+    }
+    if (p.hasBeacon) {
+        p.beaconX = p.x + p.w * 0.5;
+        p.beaconY = p.y - 36;
+    }
+    if (p.hasSnakeEgg) {
+        this.platforms.forEach(pl => pl.hasSnakeEgg = false);
+    }
+    return p;
   },
 
   tryObjectiveMorph() {
@@ -105,7 +113,7 @@ export const jumper = {
     this.platforms = this.platforms.filter(p => p.x + p.w > -100);
     while (this.platforms.length < 10) {
       const last = this.platforms.reduce((a, b) => (a.x > b.x ? a : b));
-      this.platforms.push(this.newPlatform(last.x + 120 + Math.random() * 100));
+      this.platforms.push(this.newPlatform(0, false, last));
     }
 
     for (const p of this.platforms) {
@@ -116,20 +124,23 @@ export const jumper = {
         this.vy = 0;
         this.onGround = true;
       }
-      if (p.hasCrystal && !p.crystalTaken) {
-        const dx = (this.x + this.w / 2) - p.crystalX;
-        const dy = (this.y + this.h / 2) - p.crystalY;
-        if (Math.sqrt(dx * dx + dy * dy) < 22) {
-          p.crystalTaken = true;
-          G.score += 25;
-          G.carryover.jumperCrystals++;
-          spawnParticles(p.crystalX, p.crystalY, '#a78bfa', 14);
-          if (G.carryover.jumperCrystals >= 3) {
-            this.tryObjectiveMorph();
-          }
-          return;
+      if (p.hasCrystal && !p.crystalTaken && this.x + this.w > p.crystalX - 10 && this.x < p.crystalX + 10 && this.y + this.h > p.crystalY - 10 && this.y < p.crystalY + 10) {
+        p.crystalTaken = true;
+        this.crystalsTaken++;
+        G.score += 100;
+        spawnParticles(p.crystalX, p.crystalY, '#c4b5fd', 15);
+        if (this.crystalsTaken >= this.crystalsNeeded) {
+          this.isHuntingSnake = true;
         }
       }
+      
+      if (this.isHuntingSnake && p.hasSnakeEgg && this.vy > 0 && this.y + this.h >= p.y && this.y + this.h <= p.y + 15 && this.x + this.w > p.x && this.x < p.x + p.w) {
+        G.carryover.jumperCrystals = this.crystalsTaken;
+        spawnParticles(this.x + this.w/2, this.y + this.h, COLORS[1], 40);
+        triggerMorph('objective');
+        return;
+      }
+
       if (p.hasBeacon && !p.beaconTaken) {
         const dx = (this.x + this.w / 2) - p.beaconX;
         const dy = (this.y + this.h / 2) - p.beaconY;
@@ -202,6 +213,22 @@ export const jumper = {
         c.font = '9px Courier New';
         c.textAlign = 'center';
         c.fillText('◇', bx, by + 3);
+        c.textAlign = 'left';
+      }
+      if (p.hasSnakeEgg) {
+        const ex = p.x + p.w / 2, ey = p.y - 15;
+        const pulse = Math.sin(Date.now() * 0.005) * 5;
+        c.fillStyle = COLORS[1];
+        c.shadowColor = COLORS[1];
+        c.shadowBlur = 15 + pulse;
+        c.beginPath();
+        c.ellipse(ex, ey, 12 + pulse*0.2, 18 + pulse*0.3, 0, 0, Math.PI*2);
+        c.fill();
+        c.shadowBlur = 0;
+        c.fillStyle = '#fff';
+        c.font = 'bold 9px Courier New';
+        c.textAlign = 'center';
+        c.fillText('ЯЙЦО', ex, ey + 4);
         c.textAlign = 'left';
       }
     }
