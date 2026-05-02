@@ -154,4 +154,4 @@ function initCurrentGame() {
 
 G.triggerMorph = triggerMorph;
 
-export { initCurrentGame, triggerMorph };
+export { initCurrentGame, triggerMorph, drawMorphTransition };
