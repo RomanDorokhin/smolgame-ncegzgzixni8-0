@@ -180,7 +180,6 @@ export const snake = {
        this.mealsEaten += 10; // Massive bonus
        G.carryover.snakeMeals = this.mealsEaten;
        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 40);
-       const { triggerMorph } = await import('../actions.js');
        triggerMorph('objective');
        return;
     }

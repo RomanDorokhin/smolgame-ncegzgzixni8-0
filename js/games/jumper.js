@@ -16,6 +16,7 @@ export const jumper = {
   crystalsTaken: 0,
   crystalsNeeded: 3,
   isHuntingSnake: false,
+  snakeEgg: null,
 
   init() {
     this.morphQueued = false;
@@ -27,14 +28,16 @@ export const jumper = {
     this.crystalsTaken = 0;
     this.crystalsNeeded = 3;
     this.isHuntingSnake = false;
+    this.snakeEgg = null;
     this.platforms = [];
     this.scrollSpeed = 2 + G.cycle * 0.4;
     this.runDistance = 0;
     this.runThreshold = 1200 + Math.random() * 1800 + G.cycle * 280;
     const groundY = G.H() - 80;
-    this.platforms.push({ x: -G.W(), y: groundY, w: G.W() * 3, h: 20, color: '#333' });
+    this.platforms.push({ x: -G.W(), y: groundY, w: G.W() * 3, h: 20, color: '#333', isGap: false });
     for (let i = 0; i < 8; i++) {
-      this.platforms.push(this.newPlatform(G.W() * 0.4 + i * 180, i === 0));
+      const last = this.platforms.length > 0 ? this.platforms[this.platforms.length-1] : null;
+      this.platforms.push(this.newPlatform(G.W() * 0.4 + i * 180, i === 0, last));
     }
   },
 
