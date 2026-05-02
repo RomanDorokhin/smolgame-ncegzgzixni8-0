@@ -157,7 +157,10 @@ export const snake = {
 
       if (this.mealsEaten >= this.mealsNeeded) {
         G.carryover.snakeMeals = this.mealsEaten;
-        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 25);
+        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 35);
+        
+        // Force trigger morph even if some flags are weird
+        const { triggerMorph } = await import('../actions.js');
         triggerMorph('objective');
         return;
       }

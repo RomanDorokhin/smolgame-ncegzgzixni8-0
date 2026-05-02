@@ -126,8 +126,13 @@ function loop() {
   updateChaos();
   drawCurrent();
   if (G.morphing) {
+    G.morphT = Math.min(1, (performance.now() - G.morphStartReal) / G.morphDuration);
     drawMorphTransition(G.morphT);
-    if (G.morphT >= 1) G.morphing = false;
+    // Safety: force end morphing if it's finished or stuck
+    if (G.morphT >= 1 || (performance.now() - G.morphStartReal > 5000)) {
+      G.morphing = false;
+      G.morphT = 1;
+    }
   }
   updateParticles();
   drawParticles();

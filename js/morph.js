@@ -267,9 +267,10 @@ export function drawMorphTransition(uRaw) {
 function triggerMorph(reason) {
   if (G.morphing) return;
   G.morphing = true;
+  G.morphFrom = G.gameMode;
   G.runMorphCount++;
   if (reason === 'death') G.runDeathCount++;
-  G.morphFrom = G.gameMode;
+  
   G.lastMorphReason = reason;
   const pick = pickMorphStyle(reason);
   G.morphStyle = pick.style;
