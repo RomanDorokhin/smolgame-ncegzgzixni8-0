@@ -82,10 +82,17 @@ export const snake = {
   },
 
   spawnJumperPrey() {
-    this.jumperPrey = {
-        x: Math.floor(this.gridW / 2),
-        y: Math.floor(this.gridH / 2)
-    };
+    let tries = 0;
+    while (tries++ < 200) {
+      const x = Math.floor(Math.random() * this.gridW);
+      const y = Math.floor(Math.random() * this.gridH);
+      if (!this.body.find(b => b.x === x && b.y === y)) {
+        this.jumperPrey = { x, y };
+        return;
+      }
+    }
+    // Fallback if no free space
+    this.jumperPrey = { x: Math.floor(this.gridW / 2), y: Math.floor(this.gridH / 2) };
   },
 
   spawnMeal() {
