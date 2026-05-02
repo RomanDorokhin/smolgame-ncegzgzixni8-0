@@ -35,6 +35,8 @@ export const snake = {
     this.food = [];
     this.mealsEaten = 0;
     this.mealsNeeded = 4 + Math.floor(G.cycle * 0.5);
+    this.huntingJumper = false;
+    this.jumperPrey = null;
     this.timer = 0;
     this.speed = Math.max(1, 6 - Math.floor(G.cycle * 0.8));
     this.spawnFood();
@@ -59,6 +61,7 @@ export const snake = {
   },
 
   ensureMealsOnField() {
+    if (this.huntingJumper) return; // Don't spawn normal food during hunt
     const need = 2 - this.countMealsOnFood();
     for (let k = 0; k < need; k++) this.spawnMeal();
     if (Math.random() < 0.005 && !this.food.find(f => f.isGolden)) {
@@ -76,6 +79,13 @@ export const snake = {
         return;
       }
     }
+  },
+
+  spawnJumperPrey() {
+    this.jumperPrey = {
+        x: Math.floor(this.gridW / 2),
+        y: Math.floor(this.gridH / 2)
+    };
   },
 
   spawnMeal() {
@@ -155,18 +165,26 @@ export const snake = {
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#ef4444', 6);
       }
 
-      if (this.mealsEaten >= this.mealsNeeded) {
-        G.carryover.snakeMeals = this.mealsEaten;
-        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fff', 35);
-        
-        // Force trigger morph even if some flags are weird
-        const { triggerMorph } = await import('../actions.js');
-        triggerMorph('objective');
+      if (this.mealsEaten >= this.mealsNeeded && !this.huntingJumper) {
+        this.huntingJumper = true;
+        this.food = []; // Clear all normal food
+        this.spawnJumperPrey();
         return;
       }
       this.spawnFood();
       ate = true;
     }
+    
+    // Check Jumper Prey collision
+    if (this.huntingJumper && this.jumperPrey && nx === this.jumperPrey.x && ny === this.jumperPrey.y) {
+       this.mealsEaten += 10; // Massive bonus
+       G.carryover.snakeMeals = this.mealsEaten;
+       spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 40);
+       const { triggerMorph } = await import('../actions.js');
+       triggerMorph('objective');
+       return;
+    }
+
     if (!ate) this.body.shift();
     this.ensureMealsOnField();
     for (const f of this.food) f.pulse += 0.12;
@@ -219,6 +237,26 @@ export const snake = {
         c.fill();
         c.shadowBlur = 0;
       }
+    }
+
+    if (this.huntingJumper && this.jumperPrey) {
+      const jx = fx + this.jumperPrey.x * cs;
+      const jy = fy + this.jumperPrey.y * cs;
+      const s = cs * 1.2;
+      c.fillStyle = COLORS[0];
+      c.shadowColor = COLORS[0];
+      c.shadowBlur = 20;
+      c.fillRect(jx, jy, s, s);
+      c.fillStyle = '#fff';
+      c.fillRect(jx + s*0.2, jy + s*0.2, s*0.2, s*0.2);
+      c.fillRect(jx + s*0.6, jy + s*0.2, s*0.2, s*0.2);
+      c.shadowBlur = 0;
+      
+      c.fillStyle = '#fff';
+      c.font = 'bold 12px Courier New';
+      c.textAlign = 'center';
+      c.fillText('ПОГЛОТИ ПРЕДКА!', G.W()/2, jy - 20);
+      c.textAlign = 'left';
     }
 
     if (skipPlayer) return;

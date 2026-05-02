@@ -105,8 +105,39 @@ function drawMorphShapeAt(snap, alpha, uMorph) {
     c.shadowColor = col;
     c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 12;
     c.beginPath();
-    c.moveTo(segs[0].x, segs[0].y);
-    for (let i = 1; i < segs.length; i++) c.lineTo(segs[i].x, segs[i].y);
+    
+    const isToArkanoid = G.morphFrom === 1 && G.morphTo === 2;
+    
+    if (isToArkanoid) {
+        // Snake straightens into a line
+        const head = segs[segs.length - 1];
+        const paddleW = 80 + G.carryover.snakeMeals * 6;
+        const startX = head.x - paddleW/2;
+        const endX = head.x + paddleW/2;
+        
+        c.moveTo(head.x - (head.x - segs[0].x) * (1-uMorph), head.y);
+        c.lineTo(head.x + (segs[segs.length-1].x - head.x) * (1-uMorph), head.y);
+        
+        // Custom drawing for straightening
+        const targetY = head.y;
+        c.beginPath();
+        for (let i = 0; i < segs.length; i++) {
+            const tx = head.x + (i - segs.length/2) * (paddleW / segs.length) * uMorph;
+            const ty = head.y * (1-uMorph) + targetY * uMorph;
+            const x = segs[i].x * (1-uMorph) + tx * uMorph;
+            const y = segs[i].y * (1-uMorph) + ty * uMorph;
+            if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        }
+    } else {
+        c.moveTo(segs[0].x, segs[0].y);
+        for (let i = 1; i < segs.length; i++) c.lineTo(segs[i].x, segs[i].y);
+    }
+    
+    // Transition color to blue if going to Arkanoid
+    if (isToArkanoid) {
+        c.strokeStyle = uMorph < 0.5 ? col : COLORS[2];
+    }
+    
     c.stroke();
     c.shadowBlur = 0;
     const head = segs[segs.length - 1];
