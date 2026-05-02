@@ -12,8 +12,9 @@ export function bindInput(canvas) {
   let touchStartY = 0;
   let lastTouchX = 0;
 
-  canvas.addEventListener('touchstart', e => {
-    const t = e.touches[0];
+  const handleStart = (e) => {
+    if (G.paused || !G.running) return;
+    const t = e.touches ? e.touches[0] : e;
     touchStartX = t.clientX;
     touchStartY = t.clientY;
     lastTouchX = t.clientX;
@@ -22,7 +23,10 @@ export function bindInput(canvas) {
     if (G.gameMode === 0 || G.gameMode === 4) {
       G.touchJump = true;
     }
-  }, { passive: false });
+  };
+
+  canvas.addEventListener('touchstart', handleStart, { passive: false });
+  window.addEventListener('mousedown', handleStart);
 
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
@@ -59,13 +63,16 @@ export function bindInput(canvas) {
     }
   }, { passive: false });
 
-  canvas.addEventListener('touchend', () => {
+  const handleEnd = () => {
     G.touchJump = false;
     if (G.gameMode === 2 || G.gameMode === 3) {
       G.keys['ArrowLeft'] = false;
       G.keys['ArrowRight'] = false;
     }
-  });
+  };
+
+  canvas.addEventListener('touchend', handleEnd);
+  window.addEventListener('mouseup', handleEnd);
 
   // D-pad button support (specifically for Snake)
   function setupBtn(id, code) {
