@@ -1,7 +1,6 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
-import { triggerMorph } from '../actions.js';
 
 export const flappy = {
   bird: { x: 0, y: 0, vy: 0, r: 14, angle: 0 },
@@ -77,7 +76,7 @@ export const flappy = {
 
     if (this.bird.y - this.bird.r < 0 || this.bird.y + this.bird.r > G.H() - 60) {
       spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
-      triggerMorph('death');
+      G.triggerMorph('death');
       return;
     }
 
@@ -92,7 +91,7 @@ export const flappy = {
        const cc = this.cubeCage;
        if (Math.hypot(cc.x - this.bird.x, cc.y - this.bird.y) < 35) {
           spawnParticles(cc.x, cc.y, COLORS[0], 40);
-          triggerMorph('objective');
+          G.triggerMorph('objective');
           return;
        }
        if (cc.x < -100) this.spawnCubeCage();
@@ -113,7 +112,7 @@ export const flappy = {
       if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + this.pipeW) {
         if (this.bird.y - this.bird.r < p.topH || this.bird.y + this.bird.r > p.botY) {
           spawnParticles(this.bird.x, this.bird.y, COLORS[4], 20);
-          triggerMorph('death');
+          G.triggerMorph('death');
           return;
         }
       }
@@ -190,6 +189,44 @@ export const flappy = {
     c.lineTo(12, 5);
     c.closePath();
     c.fill();
+    c.restore();
+  },
+
+  getSnapshot() {
+    return {
+      mode: 4,
+      px: this.bird.x,
+      py: this.bird.y,
+      r: this.bird.r,
+      ang: this.bird.angle
+    };
+  },
+
+  drawSnapshot(snap, alpha, uMorph) {
+    const c = G.ctx;
+    const col = COLORS[4];
+    
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(snap.px, snap.py);
+    c.rotate(snap.ang || 0);
+    c.fillStyle = col;
+    c.shadowColor = col;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 16;
+    
+    c.beginPath();
+    c.ellipse(0, 0, snap.r, snap.r * 0.75, 0, 0, Math.PI * 2);
+    c.fill();
+    c.shadowBlur = 0;
+    
+    c.fillStyle = '#fbbf24';
+    c.beginPath();
+    c.moveTo(12, -1);
+    c.lineTo(18, 2);
+    c.lineTo(12, 5);
+    c.closePath();
+    c.fill();
+    
     c.restore();
   }
 };

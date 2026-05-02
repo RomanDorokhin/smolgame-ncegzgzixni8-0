@@ -1,7 +1,6 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
-import { triggerMorph } from '../actions.js';
 
 export const shooter = {
   ship: { x: 0, y: 0, w: 30, h: 40 },
@@ -106,7 +105,7 @@ export const shooter = {
       for (const bb of this.boss.bullets) {
         if (Math.abs(bb.x - (this.ship.x + 15)) < 20 && Math.abs(bb.y - (this.ship.y + 20)) < 25) {
           spawnParticles(this.ship.x + 15, this.ship.y + 20, COLORS[3], 20);
-          triggerMorph('death');
+          G.triggerMorph('death');
           return;
         }
       }
@@ -118,7 +117,7 @@ export const shooter = {
        if (Math.hypot(bp.x - (this.ship.x + 15), bp.y - (this.ship.y + 20)) < 30) {
           G.carryover.shooterKills = this.kills;
           spawnParticles(bp.x, bp.y, COLORS[4], 40);
-          triggerMorph('objective');
+          G.triggerMorph('objective');
           return;
        }
     }
@@ -170,7 +169,7 @@ export const shooter = {
           continue;
         }
         spawnParticles(this.ship.x + 15, this.ship.y + 20, COLORS[3], 20);
-        triggerMorph('death');
+        G.triggerMorph('death');
         return;
       }
     }
@@ -274,5 +273,40 @@ export const shooter = {
       c.fillStyle = COL;
       c.fillRect(G.W() / 2 - 60, 44, 120 * pct, 6);
     }
+  },
+
+  getSnapshot() {
+    return {
+      mode: 3,
+      px: this.ship.x + this.ship.w / 2,
+      py: this.ship.y + this.ship.h / 2,
+      w: this.ship.w,
+      h: this.ship.h
+    };
+  },
+
+  drawSnapshot(snap, alpha, uMorph) {
+    const c = G.ctx;
+    const col = COLORS[3];
+    const x = snap.px - snap.w / 2;
+    const y = snap.py - snap.h / 2;
+    
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = col;
+    c.shadowColor = col;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 35 : 18;
+    
+    c.beginPath();
+    c.moveTo(snap.px, y);
+    c.lineTo(x + snap.w, y + snap.h);
+    c.lineTo(x + snap.w * 0.62, y + snap.h * 0.72);
+    c.lineTo(x + snap.w * 0.38, y + snap.h * 0.72);
+    c.lineTo(x, y + snap.h);
+    c.closePath();
+    
+    c.fill();
+    c.shadowBlur = 0;
+    c.restore();
   }
 };

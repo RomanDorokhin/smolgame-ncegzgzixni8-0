@@ -1,7 +1,6 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
-import { triggerMorph } from '../actions.js';
 
 export const jumper = {
   x: 0, y: 0, vy: 0,
@@ -73,7 +72,7 @@ export const jumper = {
   tryObjectiveMorph() {
     if (this.morphQueued || G.morphing) return;
     this.morphQueued = true;
-    triggerMorph('objective');
+    G.triggerMorph('objective');
   },
 
   update() {
@@ -140,7 +139,7 @@ export const jumper = {
       if (this.isHuntingSnake && p.hasSnakeEgg && this.vy > 0 && this.y + this.h >= p.y && this.y + this.h <= p.y + 15 && this.x + this.w > p.x && this.x < p.x + p.w) {
         G.carryover.jumperCrystals = this.crystalsTaken;
         spawnParticles(this.x + this.w/2, this.y + this.h, COLORS[1], 40);
-        triggerMorph('objective');
+        G.triggerMorph('objective');
         return;
       }
 
@@ -165,7 +164,7 @@ export const jumper = {
 
     if (this.y > G.H() + 100) {
       spawnParticles(this.x + this.w / 2, G.H(), COLORS[0], 20);
-      triggerMorph('death');
+      G.triggerMorph('death');
       return;
     }
 
@@ -258,9 +257,41 @@ export const jumper = {
     c.fillText(rd + '% пути', G.W() - 14, 52);
     c.fillText(G.carryover.jumperCrystals + ' / 3 кристаллов', G.W() - 14, 70);
     c.textAlign = 'left';
+  },
+
+  getSnapshot() {
+    return {
+      mode: 0,
+      px: this.x + this.w / 2,
+      py: this.y + this.h / 2,
+      w: this.w,
+      h: this.h
+    };
+  },
+
+  drawSnapshot(snap, alpha, uMorph) {
+    const c = G.ctx;
+    const col = COLORS[0];
+    const s = 1 + Math.sin(uMorph * Math.PI) * 0.15;
+    
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = col;
+    c.shadowColor = col;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 40 : 20;
+    
+    if (G.evolutionFeatures.includes('aura')) {
+        c.strokeStyle = 'rgba(255,255,255,0.4)';
+        c.lineWidth = 2;
+        c.strokeRect(snap.px - (snap.w * s) / 2 - 5, snap.py - (snap.h * s) / 2 - 5, snap.w * s + 10, snap.h * s + 10);
+    }
+    
+    c.fillRect(snap.px - (snap.w * s) / 2, snap.py - (snap.h * s) / 2, snap.w * s, snap.h * s);
+    c.shadowBlur = 0;
+    
+    c.fillStyle = '#fff';
+    c.fillRect(snap.px - 10, snap.py - 8, 6, 7);
+    c.fillRect(snap.px + 2, snap.py - 8, 6, 7);
+    c.restore();
   }
 };
-
-function ctx() {
-  return G.ctx;
-}

@@ -1,7 +1,6 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
-import { triggerMorph } from '../actions.js';
 
 export const arkanoid = {
   ball: { x: 0, y: 0, vx: 3, vy: -4, r: 8 },
@@ -73,7 +72,7 @@ export const arkanoid = {
 
     if (this.ball.y > G.H() + 30) {
       spawnParticles(this.ball.x, G.H() - 50, COLORS[2], 16);
-      triggerMorph('death');
+      G.triggerMorph('death');
       return;
     }
 
@@ -126,7 +125,7 @@ export const arkanoid = {
        if (sc.y + sc.h > this.paddle.y && sc.x + sc.w > this.paddle.x && sc.x < this.paddle.x + this.paddle.w) {
           G.carryover.bricksCleared = true;
           spawnParticles(sc.x + sc.w/2, sc.y + sc.h/2, COLORS[3], 40);
-          triggerMorph('objective');
+          G.triggerMorph('objective');
           return;
        }
        if (sc.y > G.H()) this.spawnShipCore(); // Respawn if missed
@@ -191,5 +190,38 @@ export const arkanoid = {
         c.fillText('ПОЙМАЙ ЯДРО!', G.W()/2, sc.y - 10);
         c.textAlign = 'left';
     }
+    }
+  },
+
+  getSnapshot() {
+    return {
+      mode: 2,
+      px: this.ball.x,
+      py: this.ball.y,
+      r: this.ball.r,
+      paddleY: this.paddle.y,
+      paddleW: this.paddle.w,
+      paddleH: this.paddle.h,
+      paddleX: this.paddle.x
+    };
+  },
+
+  drawSnapshot(snap, alpha, uMorph) {
+    const c = G.ctx;
+    const col = COLORS[2];
+    
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = col;
+    c.shadowColor = col;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 14;
+    c.fillRect(snap.paddleX, snap.paddleY, snap.paddleW, snap.paddleH);
+    
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.arc(snap.px, snap.py, snap.r, 0, Math.PI * 2);
+    c.fill();
+    c.shadowBlur = 0;
+    c.restore();
   }
 };

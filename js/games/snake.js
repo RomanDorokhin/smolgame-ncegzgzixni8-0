@@ -1,7 +1,6 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
 import { spawnParticles } from '../fx.js';
-import { triggerMorph } from '../actions.js';
 
 export const snake = {
   body: [],
@@ -138,12 +137,12 @@ export const snake = {
 
     if (nx < 0 || nx >= this.gridW || ny < 0 || ny >= this.gridH) {
       spawnParticles(this.fieldX + head.x * this.cellSize, this.fieldY + head.y * this.cellSize, COLORS[1], 16);
-      triggerMorph('death');
+      G.triggerMorph('death');
       return;
     }
     if (this.body.slice(0, -1).find(b => b.x === nx && b.y === ny)) {
       spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, COLORS[1], 16);
-      triggerMorph('death');
+      G.triggerMorph('death');
       return;
     }
 
@@ -164,7 +163,7 @@ export const snake = {
           G.carryover.snakeMeals = 20; 
           G.score += 1000;
           spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fbbf24', 40);
-          triggerMorph('objective');
+          G.triggerMorph('objective');
           return;
         }
       } else {
@@ -187,7 +186,7 @@ export const snake = {
        this.mealsEaten += 10; // Massive bonus
        G.carryover.snakeMeals = this.mealsEaten;
        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 40);
-       triggerMorph('objective');
+       G.triggerMorph('objective');
        return;
     }
 
@@ -285,5 +284,81 @@ export const snake = {
     const hy = fy + h.y * cs + 4;
     c.fillRect(hx, hy, 4, 4);
     c.fillRect(hx + cs - 10, hy, 4, 4);
+  },
+
+  getSnapshot() {
+    const h = this.body[this.body.length - 1];
+    const cs = this.cellSize;
+    return {
+      mode: 1,
+      px: this.fieldX + h.x * cs + cs / 2,
+      py: this.fieldY + h.y * cs + cs / 2,
+      segs: this.body.map(b => ({
+        x: this.fieldX + b.x * cs + cs / 2,
+        y: this.fieldY + b.y * cs + cs / 2
+      })),
+      cs
+    };
+  },
+
+  drawSnapshot(snap, alpha, uMorph) {
+    const c = G.ctx;
+    const col = COLORS[1];
+    const segs = snap.segs;
+    if (!segs || !segs.length) return;
+    
+    c.save();
+    c.globalAlpha = alpha;
+    c.strokeStyle = col;
+    c.lineWidth = snap.cs * 0.85;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.shadowColor = col;
+    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 12;
+    c.beginPath();
+    
+    const isToArkanoid = G.morphFrom === 1 && G.morphTo === 2;
+    
+    if (isToArkanoid) {
+        const head = segs[segs.length - 1];
+        const paddleW = 80 + G.carryover.snakeMeals * 6;
+        
+        c.moveTo(head.x - (head.x - segs[0].x) * (1-uMorph), head.y);
+        c.lineTo(head.x + (segs[segs.length-1].x - head.x) * (1-uMorph), head.y);
+        
+        const targetY = head.y;
+        c.beginPath();
+        for (let i = 0; i < segs.length; i++) {
+            const tx = head.x + (i - segs.length/2) * (paddleW / segs.length) * uMorph;
+            const ty = head.y * (1-uMorph) + targetY * uMorph;
+            const x = segs[i].x * (1-uMorph) + tx * uMorph;
+            const y = segs[i].y * (1-uMorph) + ty * uMorph;
+            if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        }
+    } else {
+        c.moveTo(segs[0].x, segs[0].y);
+        for (let i = 1; i < segs.length; i++) c.lineTo(segs[i].x, segs[i].y);
+    }
+    
+    if (isToArkanoid) {
+        c.strokeStyle = uMorph < 0.5 ? col : COLORS[2];
+    }
+    
+    c.stroke();
+    c.shadowBlur = 0;
+    
+    const head = segs[segs.length - 1];
+    c.fillStyle = '#fff';
+    c.fillRect(head.x - 5, head.y - 5, 4, 4);
+    c.fillRect(head.x + 1, head.y - 5, 4, 4);
+    
+    if (G.evolutionFeatures.includes('wings')) {
+        c.fillStyle = 'rgba(255,255,255,0.3)';
+        c.beginPath();
+        c.ellipse(head.x - 10, head.y - 10, 15, 5, -0.5, 0, Math.PI*2);
+        c.ellipse(head.x + 10, head.y - 10, 15, 5, 0.5, 0, Math.PI*2);
+        c.fill();
+    }
+    c.restore();
   }
 };

@@ -13,190 +13,20 @@ function easeMorphT(raw, style) {
   return t * t * (3 - 2 * t);
 }
 
+const GAMES = [jumper, snake, arkanoid, shooter, flappy];
+
 function captureMorphSnapshot(mode) {
-  switch (mode) {
-    case 0:
-      return {
-        mode: 0,
-        px: jumper.x + jumper.w / 2,
-        py: jumper.y + jumper.h / 2,
-        w: jumper.w,
-        h: jumper.h
-      };
-    case 1: {
-      const h = snake.body[snake.body.length - 1];
-      const cs = snake.cellSize;
-      return {
-        mode: 1,
-        px: snake.fieldX + h.x * cs + cs / 2,
-        py: snake.fieldY + h.y * cs + cs / 2,
-        segs: snake.body.map(b => ({
-          x: snake.fieldX + b.x * cs + cs / 2,
-          y: snake.fieldY + b.y * cs + cs / 2
-        })),
-        cs
-      };
-    }
-    case 2:
-      return {
-        mode: 2,
-        px: arkanoid.ball.x,
-        py: arkanoid.ball.y,
-        r: arkanoid.ball.r,
-        paddleY: arkanoid.paddle.y,
-        paddleW: arkanoid.paddle.w,
-        paddleH: arkanoid.paddle.h,
-        paddleX: arkanoid.paddle.x
-      };
-    case 3:
-      return {
-        mode: 3,
-        px: shooter.ship.x + shooter.ship.w / 2,
-        py: shooter.ship.y + shooter.ship.h / 2,
-        w: shooter.ship.w,
-        h: shooter.ship.h
-      };
-    case 4:
-      return {
-        mode: 4,
-        px: flappy.bird.x,
-        py: flappy.bird.y,
-        r: flappy.bird.r,
-        ang: flappy.bird.angle
-      };
-    default:
-      return { mode: 0, px: G.W() / 2, py: G.H() / 2, w: 36, h: 36 };
+  if (GAMES[mode] && GAMES[mode].getSnapshot) {
+    return GAMES[mode].getSnapshot();
   }
+  return { mode: 0, px: G.W() / 2, py: G.H() / 2, w: 36, h: 36 };
 }
 
 function drawMorphShapeAt(snap, alpha, uMorph) {
   if (alpha <= 0.01) return;
-  const c = G.ctx;
-  const col = COLORS[snap.mode];
-  c.save();
-  c.globalAlpha = alpha;
-
-  if (snap.mode === 0) {
-    const s = 1 + Math.sin(uMorph * Math.PI) * 0.15;
-    c.fillStyle = col;
-    c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 40 : 20;
-    if (G.evolutionFeatures.includes('aura')) {
-        c.strokeStyle = 'rgba(255,255,255,0.4)';
-        c.lineWidth = 2;
-        c.strokeRect(snap.px - (snap.w * s) / 2 - 5, snap.py - (snap.h * s) / 2 - 5, snap.w * s + 10, snap.h * s + 10);
-    }
-    c.fillRect(snap.px - (snap.w * s) / 2, snap.py - (snap.h * s) / 2, snap.w * s, snap.h * s);
-    c.shadowBlur = 0;
-    c.fillStyle = '#fff';
-    c.fillRect(snap.px - 10, snap.py - 8, 6, 7);
-    c.fillRect(snap.px + 2, snap.py - 8, 6, 7);
-  } else if (snap.mode === 1) {
-    const segs = snap.segs;
-    if (!segs || !segs.length) {
-      c.restore();
-      return;
-    }
-    c.strokeStyle = col;
-    c.lineWidth = snap.cs * 0.85;
-    c.lineCap = 'round';
-    c.lineJoin = 'round';
-    c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 12;
-    c.beginPath();
-    
-    const isToArkanoid = G.morphFrom === 1 && G.morphTo === 2;
-    
-    if (isToArkanoid) {
-        // Snake straightens into a line
-        const head = segs[segs.length - 1];
-        const paddleW = 80 + G.carryover.snakeMeals * 6;
-        const startX = head.x - paddleW/2;
-        const endX = head.x + paddleW/2;
-        
-        c.moveTo(head.x - (head.x - segs[0].x) * (1-uMorph), head.y);
-        c.lineTo(head.x + (segs[segs.length-1].x - head.x) * (1-uMorph), head.y);
-        
-        // Custom drawing for straightening
-        const targetY = head.y;
-        c.beginPath();
-        for (let i = 0; i < segs.length; i++) {
-            const tx = head.x + (i - segs.length/2) * (paddleW / segs.length) * uMorph;
-            const ty = head.y * (1-uMorph) + targetY * uMorph;
-            const x = segs[i].x * (1-uMorph) + tx * uMorph;
-            const y = segs[i].y * (1-uMorph) + ty * uMorph;
-            if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
-        }
-    } else {
-        c.moveTo(segs[0].x, segs[0].y);
-        for (let i = 1; i < segs.length; i++) c.lineTo(segs[i].x, segs[i].y);
-    }
-    
-    // Transition color to blue if going to Arkanoid
-    if (isToArkanoid) {
-        c.strokeStyle = uMorph < 0.5 ? col : COLORS[2];
-    }
-    
-    c.stroke();
-    c.shadowBlur = 0;
-    const head = segs[segs.length - 1];
-    c.fillStyle = '#fff';
-    c.fillRect(head.x - 5, head.y - 5, 4, 4);
-    c.fillRect(head.x + 1, head.y - 5, 4, 4);
-    
-    if (G.evolutionFeatures.includes('wings')) {
-        c.fillStyle = 'rgba(255,255,255,0.3)';
-        c.beginPath();
-        c.ellipse(head.x - 10, head.y - 10, 15, 5, -0.5, 0, Math.PI*2);
-        c.ellipse(head.x + 10, head.y - 10, 15, 5, 0.5, 0, Math.PI*2);
-        c.fill();
-    }
-  } else if (snap.mode === 2) {
-    c.fillStyle = col;
-    c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 14;
-    c.fillRect(snap.paddleX, snap.paddleY, snap.paddleW, snap.paddleH);
-    c.fillStyle = '#fff';
-    c.beginPath();
-    c.arc(snap.px, snap.py, snap.r, 0, Math.PI * 2);
-    c.fill();
-    c.shadowBlur = 0;
-  } else if (snap.mode === 3) {
-    const x = snap.px - snap.w / 2;
-    const y = snap.py - snap.h / 2;
-    c.fillStyle = col;
-    c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 35 : 18;
-    c.beginPath();
-    c.moveTo(snap.px, y);
-    c.lineTo(x + snap.w, y + snap.h);
-    c.lineTo(x + snap.w * 0.62, y + snap.h * 0.72);
-    c.lineTo(x + snap.w * 0.38, y + snap.h * 0.72);
-    c.lineTo(x, y + snap.h);
-    c.closePath();
-    c.fill();
-    c.shadowBlur = 0;
-  } else if (snap.mode === 4) {
-    c.save();
-    c.translate(snap.px, snap.py);
-    c.rotate(snap.ang || 0);
-    c.fillStyle = col;
-    c.shadowColor = col;
-    c.shadowBlur = G.evolutionFeatures.includes('glow') ? 30 : 16;
-    c.beginPath();
-    c.ellipse(0, 0, snap.r, snap.r * 0.75, 0, 0, Math.PI * 2);
-    c.fill();
-    c.shadowBlur = 0;
-    c.fillStyle = '#fbbf24';
-    c.beginPath();
-    c.moveTo(12, -1);
-    c.lineTo(18, 2);
-    c.lineTo(12, 5);
-    c.closePath();
-    c.fill();
-    c.restore();
+  if (GAMES[snap.mode] && GAMES[snap.mode].drawSnapshot) {
+    GAMES[snap.mode].drawSnapshot(snap, alpha, uMorph);
   }
-  c.restore();
 }
 
 export function drawMorphTransition(uRaw) {
@@ -316,12 +146,8 @@ function triggerMorph(reason) {
 
 function initCurrentGame() {
   G.particles = [];
-  switch (G.gameMode) {
-    case 0: jumper.init(); break;
-    case 1: snake.init(); break;
-    case 2: arkanoid.init(); break;
-    case 3: shooter.init(); break;
-    case 4: flappy.init(); break;
+  if (GAMES[G.gameMode] && GAMES[G.gameMode].init) {
+    GAMES[G.gameMode].init();
   }
   document.getElementById('gameLabel').textContent = G.MODES[G.gameMode];
 }

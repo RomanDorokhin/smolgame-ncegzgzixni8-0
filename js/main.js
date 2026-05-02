@@ -2,12 +2,13 @@ import { G, resetCarryover, syncGameModeFromStage } from './gameState.js';
 import { bindInput } from './input.js';
 import { initStars, drawBg, updateParticles, drawParticles } from './fx.js';
 import { initCurrentGame, drawMorphTransition } from './morph.js';
-import { triggerMorph } from './actions.js';
 import { jumper } from './games/jumper.js';
 import { snake } from './games/snake.js';
 import { arkanoid } from './games/arkanoid.js';
 import { shooter } from './games/shooter.js';
 import { flappy } from './games/flappy.js';
+
+const GAMES = [jumper, snake, arkanoid, shooter, flappy];
 
 const LS_BEST = 'metamorphosis_best_v1';
 
@@ -59,12 +60,8 @@ function updateCurrent() {
     mode = G.morphT < 0.5 ? G.morphFrom : G.morphTo;
   }
 
-  switch (mode) {
-    case 0: jumper.update(); break;
-    case 1: snake.update(); break;
-    case 2: arkanoid.update(); break;
-    case 3: shooter.update(); break;
-    case 4: flappy.update(); break;
+  if (GAMES[mode] && GAMES[mode].update) {
+    GAMES[mode].update();
   }
 }
 
@@ -74,7 +71,7 @@ function updateChaos() {
     chaosTimer++;
     if (chaosTimer > 60 * 15) { // Every 15s
       chaosTimer = 0;
-      triggerMorph('chaos');
+      G.triggerMorph('chaos');
     }
   } else {
     chaosTimer = 0;
@@ -105,12 +102,8 @@ function drawCurrent() {
 }
 
 function drawEnv(mode) {
-  switch (mode) {
-    case 0: jumper.draw(); break;
-    case 1: snake.draw(); break;
-    case 2: arkanoid.draw(); break;
-    case 3: shooter.draw(); break;
-    case 4: flappy.draw(); break;
+  if (GAMES[mode] && GAMES[mode].draw) {
+    GAMES[mode].draw();
   }
 }
 
