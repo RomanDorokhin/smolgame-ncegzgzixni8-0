@@ -1,4 +1,4 @@
-import { MODES, COLORS } from './constants.js';
+import { MODES, COLORS, PALETTES } from './constants.js';
 
 const localG = {
   canvas: null,
@@ -68,7 +68,16 @@ const localG = {
   },
 
   MODES,
-  COLORS,
+  PALETTES,
+  
+  get COLORS() {
+    const pIndex = Math.min(this.cycle, PALETTES.length - 1);
+    return PALETTES[pIndex];
+  },
+  
+  getColor(idx) {
+    return this.COLORS[idx] || '#fff';
+  }
 };
 
 if (typeof window !== 'undefined') {
