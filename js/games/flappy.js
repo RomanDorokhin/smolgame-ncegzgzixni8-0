@@ -22,27 +22,24 @@ export const flappy = {
     this.pipes = [];
     this.pipeTimer = 0;
     this.distance = 0;
-    const bonus = G.carryover.shooterKills || 0;
-    this.distanceNeeded = Math.max(10, 20 - Math.floor(bonus / 2));
+    // Lowered distance needed
+    this.distanceNeeded = 10;
     G.carryover.flappyHeight = 0;
   },
 
   update() {
     const mod = G.currentMod;
-    let g = 0.4 * (G.dt * 60);
-    let jump = -6;
-    if (mod.name === 'ЛЕГКОСТЬ') { g = 0.28 * (G.dt * 60); jump = -5; }
-    if (mod.name === 'УСКОРЕНИЕ') { g = 0.55 * (G.dt * 60); }
-
+    let g = 0.4 * G.dt;
+    let jump = -7;
+    if (mod.name === 'ЛЕГКОСТЬ') { g = 0.25 * G.dt; jump = -6; }
+    
     this.vy += g;
-    this.y += this.vy * (G.dt * 60);
+    this.y += this.vy * G.dt;
 
     if (G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump) {
-      if (this.vy > -2) {
-        this.vy = jump;
-        playSound('jump');
-        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-      }
+      this.vy = jump;
+      playSound('jump');
+      if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
     }
     addTrail(this.x, this.y, COLORS[4]);
 
@@ -54,12 +51,12 @@ export const flappy = {
     }
 
     // Pipes
-    this.pipeTimer++;
-    const spawnRate = mod.name === 'УСКОРЕНИЕ' ? 70 : 100;
+    this.pipeTimer += G.dt;
+    const spawnRate = mod.name === 'УСКОРЕНИЕ' ? 60 : 90;
     if (this.pipeTimer > spawnRate) {
       this.pipeTimer = 0;
-      const gap = 100 - Math.min(40, G.cycle * 6);
-      const topH = 60 + Math.random() * (this.height - gap - 140);
+      const gap = 170 + Math.random() * 30; // Very generous gap
+      const topH = 50 + Math.random() * (this.height - gap - 100);
       this.pipes.push({
         x: this.width,
         topH: topH,
@@ -68,7 +65,7 @@ export const flappy = {
       });
     }
 
-    const scroll = 2.5 + G.cycle * 0.3;
+    const scroll = (3 + G.cycle * 0.1) * G.dt; // Very slow speed growth
     for (const p of this.pipes) {
       p.x -= scroll;
       if (!p.passed && p.x + 50 < this.x) {
