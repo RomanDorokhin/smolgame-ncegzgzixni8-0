@@ -144,7 +144,7 @@ function loop() {
   saveBestIfNeeded();
   updateBestLine();
 
-  const c = G.ctx;
+
   if (G.cycle > 0) {
     c.fillStyle = 'rgba(255,255,255,0.2)';
     c.font = '11px Courier New';
