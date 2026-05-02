@@ -116,6 +116,16 @@ function loop() {
   c.globalCompositeOperation = 'source-over';
   c.shadowBlur = 0;
 
+  c.save();
+  // Apply screenshake
+  if (G.shake > 0) {
+    const sx = (Math.random() - 0.5) * G.shake;
+    const sy = (Math.random() - 0.5) * G.shake;
+    c.translate(sx, sy);
+    G.shake *= 0.9;
+    if (G.shake < 0.5) G.shake = 0;
+  }
+
   drawBg();
   if (G.morphing) {
     G.morphT = Math.min(1, (performance.now() - G.morphStartReal) / G.morphDuration);
@@ -132,6 +142,9 @@ function loop() {
       G.morphing = false; // Emergency stop
     }
     
+    // Peak of morph = screenshake!
+    if (G.morphT > 0.1 && G.morphT < 0.2 && G.shake < 5) G.shake = 15;
+
     if (G.morphT >= 1 || (performance.now() - G.morphStartReal > 5000)) {
       G.morphing = false;
       G.morphT = 1;
@@ -161,11 +174,15 @@ function loop() {
     yPos += 15;
   }
   if (G.carryover.snakeMeals > 0) {
-    c.fillText('РАЗМЕР: +' + G.carryover.snakeMeals, 20, yPos);
+    c.fillText('ЕДА: +' + G.carryover.snakeMeals, 20, yPos);
     yPos += 15;
   }
-  if (G.carryover.bricksCleared) {
-    c.fillText('ЩИТ: АКТИВЕН', 20, yPos);
+  if (G.carryover.bricksCleared > 0) {
+    c.fillText('БЛОКИ: +' + G.carryover.bricksCleared, 20, yPos);
+    yPos += 15;
+  }
+  if (G.carryover.shooterKills > 0) {
+    c.fillText('УБИЙСТВА: +' + G.carryover.shooterKills, 20, yPos);
     yPos += 15;
   }
 
@@ -178,6 +195,7 @@ function loop() {
     c.fillText(mod.name + ': ' + mod.desc, G.W() - 20, G.H() - 30);
     c.textAlign = 'left';
   }
+  c.restore();
 }
 
 function startGame() {

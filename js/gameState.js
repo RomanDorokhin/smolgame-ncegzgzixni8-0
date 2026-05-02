@@ -28,7 +28,7 @@ const localG = {
   rafId: 0,
   particles: [],
   bgStars: [],
-
+  shake: 0,
   keys: {},
   touchJump: false,
 
