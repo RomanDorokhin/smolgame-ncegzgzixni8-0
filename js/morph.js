@@ -5,7 +5,6 @@ import { snake } from './games/snake.js';
 import { arkanoid } from './games/arkanoid.js';
 import { shooter } from './games/shooter.js';
 import { flappy } from './games/flappy.js';
-import { registerMorphTrigger } from './actions.js';
 
 function easeMorphT(raw, style) {
   if (style === 'flash') return raw < 0.42 ? 0 : 1;
@@ -327,6 +326,6 @@ function initCurrentGame() {
   document.getElementById('gameLabel').textContent = G.MODES[G.gameMode];
 }
 
-registerMorphTrigger(triggerMorph);
+G.triggerMorph = triggerMorph;
 
 export { initCurrentGame, triggerMorph };
