@@ -184,24 +184,16 @@ export const snake = {
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#ef4444', 6);
       }
 
-      if (this.mealsEaten >= this.mealsNeeded && !this.huntingJumper) {
-        this.huntingJumper = true;
-        this.food = []; // Clear all normal food
-        this.spawnJumperPrey();
+      if (this.mealsEaten >= this.mealsNeeded) {
+        G.carryover.shield = Math.floor(G.score / 200);
+        G.triggerMorph('objective');
         return;
       }
       this.spawnFood();
       ate = true;
     }
     
-    // Check Jumper Prey collision
-    if (this.huntingJumper && this.jumperPrey && nx === this.jumperPrey.x && ny === this.jumperPrey.y) {
-       this.mealsEaten += 10; // Massive bonus
-       G.carryover.snakeMeals = this.mealsEaten;
-       spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 40);
-       G.triggerMorph('objective');
-       return;
-    }
+    // Removed huntingJumper logic
 
     if (!ate) this.body.shift();
     this.ensureMealsOnField();
