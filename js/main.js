@@ -233,9 +233,10 @@ function startGame() {
     resetCarryover();
     
     G.running = true;
+    resize(); // Force resize to set canvas dimensions and init stars
     initCurrentGame();
     startLoop(loop);
-    console.log("Game started successfully.");
+    console.log("Game started successfully. Canvas size:", G.canvas.width, "x", G.canvas.height);
   } catch (err) {
     console.error("Failed to start game:", err);
   }
