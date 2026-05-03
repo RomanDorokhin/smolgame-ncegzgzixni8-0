@@ -465,7 +465,7 @@ function drawMorphTransition(uRaw) {
   }
 }
 
-export function triggerMorph(reason) {
+function triggerMorph(reason) {
   if (G.morphing) return;
   
   // Cooldown check (8 seconds), but ignore for death

@@ -108,6 +108,12 @@ export function resetCarryover() {
     bricksCleared: 0,
     shooterKills: 0,
     flappyHeight: 0,
+    enemies: [],
+    bullets: [],
+    kills: 0,
+    shotTimer: 0,
+    vy: 0,
+    killsNeeded: 10
   };
 }
 

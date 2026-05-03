@@ -132,7 +132,7 @@ export const snake = {
 
     this.timer++;
     let finalSpeed = this.speed;
-    if (mod.name === 'УСКОРЕНИЕ') finalSpeed = Math.max(1, finalSpeed - 2);
+    if (G.currentMod.name === 'УСКОРЕНИЕ') finalSpeed = Math.max(1, finalSpeed - 2);
 
     if (this.timer < finalSpeed) return;
     this.timer = 0;

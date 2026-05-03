@@ -392,10 +392,9 @@ function startGame() {
   G.bossInited = false;
   resetCarryover();
   
-  cancelAnimationFrame(G.rafId);
   G.running = true;
   initCurrentGame();
-  loop();
+  G.rafId = requestAnimationFrame(loop);
 }
 
 G.showVictory = showVictory;
