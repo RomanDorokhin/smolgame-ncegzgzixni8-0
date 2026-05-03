@@ -12,12 +12,13 @@ export const jumper = {
   crystals: [],
   platforms: [],
   crystalsCollected: 0,
-  crystalsNeeded: 5,
+  crystalsNeeded: 7,
   cellSize: 20,
   spawnTimer: 0,
   jumpsLeft: 0,
   maxJumps: 2,
   jumpPressed: false,
+  autoScroll: 0,
 
   spawnPlatform(idx) {
     const y = this.y - 120 - idx * 70;
@@ -43,16 +44,17 @@ export const jumper = {
     this.y = G.H() - 250; 
     this.vx = 0; 
     this.vy = 0;
-    this.spawnTimer = 30; // 0.5s of safety
+    this.spawnTimer = 40; 
+    this.autoScroll = 0;
     
     this.camY = 0; 
     this.crystals = [];
     this.platforms = [];
     this.crystalsCollected = 0;
-    this.crystalsNeeded = 5 + G.cycle * 1;
+    this.crystalsNeeded = 7 + G.cycle * 2;
 
-    // First platform: normal but safe
-    const startPW = 140;
+    // First platform: safe
+    const startPW = 160;
     this.platforms.push({ 
       x: this.x - (startPW - this.w) / 2, 
       y: this.y + this.h, 
@@ -64,10 +66,10 @@ export const jumper = {
     
     // Gen platforms higher up
     let curY = this.y - 120;
-    for (let i = 0; i < 50; i++) {
-      const pw = 70 + Math.random() * 60;
-      // Mines from the start, but rare
-      const hasMine = (i > 2 && Math.random() < 0.12);
+    for (let i = 0; i < 100; i++) {
+      const difficulty = Math.min(1, i / 60);
+      const pw = (80 - difficulty * 30) + Math.random() * 50;
+      const hasMine = (i > 3 && Math.random() < 0.1 + difficulty * 0.15);
       const plat = {
         x: Math.random() * (G.W() - pw),
         y: curY,
@@ -77,7 +79,8 @@ export const jumper = {
       };
       this.platforms.push(plat);
       
-      if (Math.random() < 0.6 && !hasMine) { // Higher crystal density
+      // Crystals every ~4 platforms
+      if (i > 0 && i % 4 === 0) {
         this.crystals.push({
           x: plat.x + pw / 2 - 8,
           y: curY - 30,
@@ -86,7 +89,7 @@ export const jumper = {
           pulse: Math.random() * 10
         });
       }
-      curY -= 100 + Math.random() * 35;
+      curY -= 110 + difficulty * 20 + Math.random() * 20;
     }
   },
 
@@ -149,9 +152,13 @@ export const jumper = {
 
     if (this.x > G.W()) this.x = 0;
 
-    // Camera follow upward
-    const targetCamY = Math.min(0, -this.y + G.H() * 0.4);
+    // Camera follow and auto-scroll
+    const targetCamY = Math.min(0, -this.y + G.H() * 0.5);
     this.camY += (targetCamY - this.camY) * 0.1;
+    
+    // Auto-scroll pressure
+    this.autoScroll -= 0.4 * G.dt; 
+    if (this.camY > this.autoScroll) this.camY = this.autoScroll;
 
     // Crystal collection
     for (const c of this.crystals) {
