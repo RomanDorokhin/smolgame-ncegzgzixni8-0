@@ -13,6 +13,8 @@ export const jumper = {
   platforms: [],
   crystalsCollected: 0,
   crystalsNeeded: 5,
+  cellSize: 20,
+  spawnTimer: 0,
 
   spawnPlatform(idx) {
     const y = this.y - 120 - idx * 70;
@@ -35,23 +37,23 @@ export const jumper = {
     this.w = 36;
     this.h = 36;
     this.x = G.W() / 2 - this.w / 2;
-    this.y = G.H() - 200; 
+    this.y = G.H() - 250; 
     this.vx = 0; 
     this.vy = 0;
+    this.spawnTimer = 120; // 2 seconds of safety at 60fps
     
-    this.camY = -this.y + G.H() * 0.6; // Correctly center camera at start
+    this.camY = 0; // Reset camera
     this.crystals = [];
     this.platforms = [];
     this.crystalsCollected = 0;
     this.crystalsNeeded = 5 + G.cycle * 2;
 
-    // Guaranteed safe start platform
-    const startPW = 220;
+    // Guaranteed FULL WIDTH start platform
     this.platforms.push({ 
-      x: this.x - (startPW - this.w) / 2, 
+      x: -50, 
       y: this.y + this.h, 
-      w: startPW, 
-      h: 40,
+      w: G.W() + 100, 
+      h: 100,
       mine: false 
     });
     this.grounded = true;
@@ -59,9 +61,8 @@ export const jumper = {
     // Gen platforms higher up
     let curY = this.y - 120;
     for (let i = 0; i < 40; i++) {
-      const pw = 80 + Math.random() * 60;
-      // First 5 platforms are mine-free
-      const hasMine = (i > 5 && G.cycle >= 3 && Math.random() < 0.25);
+      const pw = 100 + Math.random() * 60;
+      const hasMine = (i > 5 && G.cycle >= 3 && Math.random() < 0.2);
       this.platforms.push({
         x: Math.random() * (G.W() - pw),
         y: curY,
@@ -69,16 +70,7 @@ export const jumper = {
         h: 15,
         mine: hasMine
       });
-      if (Math.random() < 0.4 && !hasMine) {
-        this.crystals.push({
-          x: this.platforms[this.platforms.length - 1].x + pw / 2 - 8,
-          y: curY - 30,
-          w: 16, h: 16,
-          collected: false,
-          pulse: Math.random() * 10
-        });
-      }
-      curY -= 120 + Math.random() * 40;
+      curY -= 130 + Math.random() * 30;
     }
   },
 
@@ -161,7 +153,8 @@ export const jumper = {
     }
 
     // Death by falling
-    if (this.y > this.camY + G.H() + 100) {
+    if (this.spawnTimer > 0) this.spawnTimer -= G.dt;
+    if (this.spawnTimer <= 0 && this.y > this.camY + G.H() + 200) {
       spawnParticles(this.x, G.H(), COLORS[0], 16);
       G.triggerMorph('death');
     }
