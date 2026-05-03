@@ -484,6 +484,8 @@ function triggerMorph(reason) {
   // Clear any potential overlaps
   G.touchDir = 0;
   G.touchJump = false;
+  G.particles = [];
+  G.trails = [];
   
   // Cooldown check (8 seconds), but ignore for death
   const now = performance.now();
