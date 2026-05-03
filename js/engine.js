@@ -29,9 +29,11 @@ export function saveBestIfNeeded() {
   if (s <= G.bestScore) return;
   G.bestScore = s;
   
-  if (window.Telegram && window.Telegram.WebApp.CloudStorage) {
-    window.Telegram.WebApp.CloudStorage.setItem(LS_BEST, String(G.bestScore));
-  }
+  try {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage) {
+      window.Telegram.WebApp.CloudStorage.setItem(LS_BEST, String(G.bestScore));
+    }
+  } catch (e) {}
   try {
     localStorage.setItem(LS_BEST, String(G.bestScore));
   } catch (_) { /* ignore */ }

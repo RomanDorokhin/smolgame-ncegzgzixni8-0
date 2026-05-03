@@ -41,11 +41,14 @@ if (window.Telegram && window.Telegram.WebApp) {
 
 function loadBestScore() {
   const LS_BEST = 'metamorphosis_best_v1';
-  if (window.Telegram && window.Telegram.WebApp.CloudStorage) {
-    window.Telegram.WebApp.CloudStorage.getItem(LS_BEST, (err, v) => {
-      if (!err && v) G.bestScore = Math.max(G.bestScore, parseInt(v, 10) || 0);
-    });
-  }
+  try {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage) {
+      window.Telegram.WebApp.CloudStorage.getItem(LS_BEST, (err, v) => {
+        if (!err && v) G.bestScore = Math.max(G.bestScore, parseInt(v, 10) || 0);
+      });
+    }
+  } catch (e) { console.warn("CloudStorage unsupported"); }
+
   try {
     const v = localStorage.getItem(LS_BEST);
     if (v != null) G.bestScore = Math.max(G.bestScore, parseInt(v, 10) || 0);

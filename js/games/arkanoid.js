@@ -111,9 +111,11 @@ export const arkanoid = {
           G.score += 50;
           if (G.cycle >= 5) boss.damage(5);
           playSound('collect');
-          if (window.Telegram?.WebApp?.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-          }
+          try {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+              window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+          } catch (e) {}
           spawnParticles(br.x + br.w / 2, br.y + br.h / 2, br.color, 8);
           
           // Small chance for a new ball on brick break in high cycles
