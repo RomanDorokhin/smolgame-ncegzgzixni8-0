@@ -79,7 +79,7 @@ export const jumper = {
       let attempts = 0;
       while (attempts < 10) {
         const dist = Math.abs(px + pw/2 - (lastP.x + lastP.w/2));
-        if (dist < 250) break; // Reachable horizontal distance
+        if (dist < 210) break; // More reachable horizontal distance
         px = Math.random() * (G.W() - pw);
         attempts++;
       }

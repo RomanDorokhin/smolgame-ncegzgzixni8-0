@@ -467,7 +467,7 @@ function drawMorphTransition(uRaw) {
   // Narrative Story Text
   const text = G.storyTexts[G.morphTo];
   if (text) {
-    const alpha = Math.sin(uMorph * Math.PI); // Fade in and out
+    const alpha = Math.sin(uRaw * Math.PI); // Fade in and out
     c.fillStyle = `rgba(255, 255, 255, ${alpha})`;
     c.font = 'bold 18px Courier New';
     c.textAlign = 'center';
