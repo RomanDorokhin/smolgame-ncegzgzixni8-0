@@ -45,12 +45,16 @@ export const boss = {
       h.y += h.vy * G.dt;
 
       // Simple collision check with player
-      // We'll approximate player positions across modes
       let px = 0, py = 0, pr = 15;
       const m = G.getModeObject();
       if (m) {
-        px = m.x || m.paddleX || (m.body && m.body[0] ? m.body[0].x * (m.cellSize || 20) : 0);
-        py = m.y || m.paddleY || (m.body && m.body[0] ? m.body[0].y * (m.cellSize || 20) : 0);
+        if (m.x !== undefined) px = m.x;
+        else if (m.paddleX !== undefined) px = m.paddleX + (m.paddleW || 0) / 2;
+        else if (m.body && m.body[0]) px = m.body[0].x * (m.cellSize || 20);
+
+        if (m.y !== undefined) py = m.y;
+        else if (m.paddleY !== undefined) py = m.paddleY;
+        else if (m.body && m.body[0]) py = m.body[0].y * (m.cellSize || 20);
       }
 
       const dist = Math.hypot(px - h.x, py - h.y);
