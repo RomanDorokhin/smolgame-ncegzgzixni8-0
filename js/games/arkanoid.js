@@ -140,7 +140,7 @@ export const arkanoid = {
     }
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const col = COLORS[2];
 

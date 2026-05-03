@@ -130,7 +130,7 @@ export const shooter = {
     this.enemies = this.enemies.filter(e => e.hp > 0);
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const col = COLORS[3];
 

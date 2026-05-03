@@ -104,7 +104,7 @@ export const flappy = {
     this.pipes = this.pipes.filter(p => p.x > -60);
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const col = COLORS[4];
 

@@ -99,7 +99,7 @@ export const boss = {
     }
   },
 
-  draw() {
+  draw(skipPlayer = false) {
     const c = G.ctx;
     const w = this.width;
     const h = this.height;
@@ -108,7 +108,7 @@ export const boss = {
     for (const haz of this.hazards) {
       c.fillStyle = haz.color || '#ef4444';
       c.beginPath();
-      c.arc(haz.x, haz.y, haz.r, 0, Math.PI * 2);
+      c.arc(haz.x, haz.y, Math.max(0.1, haz.r), 0, Math.PI * 2);
       c.fill();
     }
 
