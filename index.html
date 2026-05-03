@@ -38,8 +38,6 @@
 
 <div id="fireBtn" class="hidden">ОГОНЬ</div>
 
-
-
 <div id="overlay">
   <h1>Metamorphosis</h1>
   <p>Одно существо · пять форм · одна душа<br>
@@ -62,6 +60,12 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js" onerror="alert('CRITICAL: Failed to load js/main.js')"></script>
+<script>
+  window.onerror = function(msg, url, line) {
+    alert('GLOBAL ERR: ' + msg + '\nLine: ' + line);
+    return false;
+  };
+</script>
 </body>
 </html>
