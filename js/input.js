@@ -6,34 +6,23 @@ export function bindInput(canvas) {
     return;
   }
 
+  const getActualCode = (code) => {
+    if (G.currentMod.name !== 'ИНВЕРСИЯ') return code;
+    const map = {
+      'ArrowLeft': 'ArrowRight', 'ArrowRight': 'ArrowLeft',
+      'ArrowUp': 'ArrowDown', 'ArrowDown': 'ArrowUp',
+      'KeyA': 'KeyD', 'KeyD': 'KeyA',
+      'KeyW': 'KeyS', 'KeyS': 'KeyW'
+    };
+    return map[code] || code;
+  };
+
   // Key handlers
   window.addEventListener('keydown', e => { 
-    let code = e.code;
-    if (G.currentMod.name === 'ИНВЕРСИЯ') {
-      if (code === 'ArrowLeft') code = 'ArrowRight';
-      else if (code === 'ArrowRight') code = 'ArrowLeft';
-      else if (code === 'ArrowUp') code = 'ArrowDown';
-      else if (code === 'ArrowDown') code = 'ArrowUp';
-      else if (code === 'KeyA') code = 'KeyD';
-      else if (code === 'KeyD') code = 'KeyA';
-      else if (code === 'KeyW') code = 'KeyS';
-      else if (code === 'KeyS') code = 'KeyW';
-    }
-    G.keys[code] = true; 
+    G.keys[getActualCode(e.code)] = true; 
   });
   window.addEventListener('keyup', e => { 
-    let code = e.code;
-    if (G.currentMod.name === 'ИНВЕРСИЯ') {
-      if (code === 'ArrowLeft') code = 'ArrowRight';
-      else if (code === 'ArrowRight') code = 'ArrowLeft';
-      else if (code === 'ArrowUp') code = 'ArrowDown';
-      else if (code === 'ArrowDown') code = 'ArrowUp';
-      else if (code === 'KeyA') code = 'KeyD';
-      else if (code === 'KeyD') code = 'KeyA';
-      else if (code === 'KeyW') code = 'KeyS';
-      else if (code === 'KeyS') code = 'KeyW';
-    }
-    G.keys[code] = false; 
+    G.keys[getActualCode(e.code)] = false; 
   });
 
   // Touch state
@@ -117,43 +106,27 @@ export function bindInput(canvas) {
     const el = document.getElementById(id);
     if (!el) return;
     
-    let actualCode = code;
-    
     el.addEventListener('touchstart', (e) => { 
       e.preventDefault(); 
-      if (G.currentMod.name === 'ИНВЕРСИЯ') {
-        if (code === 'ArrowLeft') actualCode = 'ArrowRight';
-        else if (code === 'ArrowRight') actualCode = 'ArrowLeft';
-        else if (code === 'ArrowUp') actualCode = 'ArrowDown';
-        else if (code === 'ArrowDown') actualCode = 'ArrowUp';
-      } else {
-        actualCode = code;
-      }
+      const actualCode = getActualCode(code);
       G.keys[actualCode] = true; 
-      if(actualCode==='ArrowUp') G.touchJump=true; 
+      if(actualCode === 'ArrowUp') G.touchJump = true; 
     }, { passive: false });
 
     el.addEventListener('touchend', (e) => { 
       e.preventDefault(); 
-      G.keys[actualCode] = false; 
-      G.touchJump=false; 
+      G.keys[getActualCode(code)] = false; 
+      G.touchJump = false; 
     }, { passive: false });
 
     el.addEventListener('mousedown', () => { 
-      if (G.currentMod.name === 'ИНВЕРСИЯ') {
-        if (code === 'ArrowLeft') actualCode = 'ArrowRight';
-        else if (code === 'ArrowRight') actualCode = 'ArrowLeft';
-        else if (code === 'ArrowUp') actualCode = 'ArrowDown';
-        else if (code === 'ArrowDown') actualCode = 'ArrowUp';
-      } else {
-        actualCode = code;
-      }
+      const actualCode = getActualCode(code);
       G.keys[actualCode] = true; 
-      if(actualCode==='ArrowUp') G.touchJump=true; 
+      if(actualCode === 'ArrowUp') G.touchJump = true; 
     });
     el.addEventListener('mouseup', () => { 
-      G.keys[actualCode] = false; 
-      G.touchJump=false; 
+      G.keys[getActualCode(code)] = false; 
+      G.touchJump = false; 
     });
   }
   setupBtn('btnUp', 'ArrowUp');

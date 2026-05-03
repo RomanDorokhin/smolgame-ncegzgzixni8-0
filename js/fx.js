@@ -113,7 +113,7 @@ export function initStars() {
 
 export function drawBg() {
   const c = ctx();
-  const color = COLORS[G.gameMode];
+  const color = G.COLORS[G.gameMode];
   c.fillStyle = '#05050a';
   c.fillRect(0, 0, G.W(), G.H());
   c.globalAlpha = 0.04;

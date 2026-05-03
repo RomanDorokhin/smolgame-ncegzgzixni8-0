@@ -40,7 +40,6 @@ const localG = {
   lastMorphRealTime: 0,
   trails: [],
   dt: 0,
-  lastTime: 0,
   bestScore: 0,
   
   runStartTime: 0,

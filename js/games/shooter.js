@@ -36,7 +36,7 @@ export const shooter = {
     if (mod.name === 'УСКОРЕНИЕ') spd = 6.5;
 
     // Move
-    const speed = 6 * G.dt;
+    const speed = spd * G.dt;
     let isMovingMobile = false;
 
     if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.x -= speed;
@@ -61,7 +61,8 @@ export const shooter = {
 
     for (const b of this.bullets) {
       b.y += b.vy * G.dt;
-    }this.bullets = this.bullets.filter(b => b.y > -20);
+    }
+    this.bullets = this.bullets.filter(b => b.y > -20);
 
     // Spawn enemies
     if (Math.random() < 0.02 + G.cycle * 0.003) {

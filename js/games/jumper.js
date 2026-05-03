@@ -135,7 +135,6 @@ export const jumper = {
     for (const c of this.crystals) {
       if (c.collected) continue;
       if (
-        !c.collected &&
         this.x + this.w > c.x &&
         this.x < c.x + c.w &&
         this.y + this.h > c.y &&
@@ -182,11 +181,10 @@ export const jumper = {
       if (p.mine) {
         c.fillStyle = '#ef4444';
         const pulse = Math.sin(performance.now() * 0.015) * 2;
-        c.beginPath();
-        c.arc(p.x + p.w / 2, p.y - 4, 6 + pulse, 0, Math.PI * 2);
-        c.fill();
         c.shadowColor = '#ef4444';
         c.shadowBlur = 10;
+        c.beginPath();
+        c.arc(p.x + p.w / 2, p.y - 4, 6 + pulse, 0, Math.PI * 2);
         c.fill();
         c.shadowBlur = 0;
       }

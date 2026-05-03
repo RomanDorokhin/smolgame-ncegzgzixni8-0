@@ -78,23 +78,31 @@ function hideAllOverlays() {
 function updateCurrent() {
   if (G.paused) return;
   
-  // Show Onboarding Hint
+  // Show Onboarding Hint (Consolidated)
   const hint = document.getElementById('mobileHint');
   if (hint && G.running && !G.morphing) {
-    const texts = [
-      'ТАПНИ ДЛЯ ПРЫЖКА / СВАЙП ВЛЕВО-ВПРАВО',
-      'СВАЙПАЙ В 4 СТОРОНЫ ДЛЯ ПОВОРОТА',
-      'ДВИГАЙ ПЛАТФОРМУ ВЛЕВО-ВПРАВО',
-      'УДЕРЖИВАЙ И ДВИГАЙ ДЛЯ СТРЕЛЬБЫ',
-      'ТАПАЙ ДЛЯ ВЗЛЁТА'
-    ];
-    hint.textContent = texts[G.gameMode];
-    hint.classList.remove('hidden');
-    // Hide after 3s
-    if (!G.hintTimer) G.hintTimer = performance.now();
-    if (performance.now() - G.hintTimer > 3000) {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isJumpMode = (G.gameMode === 0 || G.gameMode === 4);
+    
+    if (isMobile && isJumpMode && !G._hintShown) {
+      const texts = [
+        'ТАПНИ ДЛЯ ПРЫЖКА / СВАЙП ВЛЕВО-ВПРАВО',
+        'СВАЙПАЙ В 4 СТОРОНЫ ДЛЯ ПОВОРОТА',
+        'ДВИГАЙ ПЛАТФОРМУ ВЛЕВО-ВПРАВО',
+        'УДЕРЖИВАЙ И ДВИГАЙ ДЛЯ СТРЕЛЬБЫ',
+        'ТАПАЙ ДЛЯ ВЗЛЁТА'
+      ];
+      hint.textContent = texts[G.gameMode];
+      hint.classList.remove('hidden');
+      G._hintShown = true;
+      if (!G.hintTimer) G.hintTimer = performance.now();
+    }
+    
+    if (G.hintTimer && performance.now() - G.hintTimer > 3000) {
       hint.classList.add('hidden');
     }
+    
+    if (!isJumpMode) G._hintShown = false;
   }
 
   let mode = G.gameMode;
@@ -278,20 +286,6 @@ function loop(timestamp) {
     }
   }
 
-  // Mobile Jump Hint
-  const hintEl = document.getElementById('mobileHint');
-  if (hintEl) {
-    const isJumpMode = (G.gameMode === 0 || G.gameMode === 4);
-    if (isJumpMode && G.running && !G.morphing && !G._hintShown) {
-      hintEl.classList.remove('hidden');
-      G._hintShown = true;
-      if (!G.hintTimer) G.hintTimer = performance.now();
-    }
-    if (isJumpMode && G.hintTimer && performance.now() - G.hintTimer > 3000) {
-      hintEl.classList.add('hidden');
-    }
-    if (!isJumpMode) G._hintShown = false;
-  }
 }
 
 
@@ -366,7 +360,11 @@ document.addEventListener('touchstart', e => {
 }, { passive: false });
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) G.paused = true;
+  if (document.hidden) {
+    G.paused = true;
+  } else {
+    G.paused = false;
+  }
 });
 
 const startBtn = document.getElementById('startBtn');
