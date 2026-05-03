@@ -80,12 +80,12 @@ export const jumper = {
       };
       this.platforms.push(plat);
       
-      // Crystals spaced out every ~5-7 platforms
-      if (i > 0 && i % 6 === 0) {
+      // Crystals spaced out every ~6 platforms, but ONLY on safe ones
+      if (i > 0 && i % 6 === 0 && !plat.mine) {
         this.crystals.push({
-          x: plat.x + pw / 2 - 10,
-          y: curY - 40,
-          w: 20, h: 20,
+          x: plat.x + pw / 2 - 12,
+          y: curY - 45,
+          w: 24, h: 24,
           collected: false,
           pulse: Math.random() * 10
         });
