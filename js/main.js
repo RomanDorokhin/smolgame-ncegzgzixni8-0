@@ -60,19 +60,24 @@ function updateCurrent() {
   const hint = document.getElementById('mobileHint');
   if (hint && G.running && !G.morphing) {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    if (isMobile && !G._hintShown) {
-      const texts = [
-        'ТАПНИ ДЛЯ ПРЫЖКА / СВАЙП ВЛЕВО-ВПРАВО',
-        'СВАЙПАЙ В 4 СТОРОНЫ ДЛЯ ПОВОРОТА',
-        'ДВИГАЙ ПЛАТФОРМУ ВЛЕВО-ВПРАВО',
-        'УДЕРЖИВАЙ И ДВИГАЙ ДЛЯ СТРЕЛЬБЫ',
-        'ТАПАЙ ДЛЯ ВЗЛЁТА'
-      ];
-      hint.textContent = texts[G.gameMode];
-      hint.classList.remove('hidden');
-      G._hintShown = true;
-      G.hintTimer = performance.now();
-    }
+      if (isMobile && !G._hintShown) {
+        const texts = [
+          'ВЕДИ ПАЛЬЦЕМ ИЛИ ЖМИ СТРЕЛКИ',
+          'СВАЙПАЙ В 4 СТОРОНЫ ДЛЯ ПОВОРОТА',
+          'ДВИГАЙ ПЛАТФОРМУ ВЛЕВО-ВПРАВО',
+          'УДЕРЖИВАЙ И ДВИГАЙ ДЛЯ СТРЕЛЬБЫ',
+          'ТАПАЙ ДЛЯ ВЗЛЁТА'
+        ];
+        hint.textContent = texts[G.gameMode];
+        hint.classList.remove('hidden');
+        
+        // Show D-pad if mobile
+        const ctrl = document.getElementById('controls');
+        if (ctrl) ctrl.classList.remove('hidden');
+
+        G._hintShown = true;
+        G.hintTimer = performance.now();
+      }
     if (G.hintTimer && performance.now() - G.hintTimer > 3000) {
       hint.classList.add('hidden');
     }
