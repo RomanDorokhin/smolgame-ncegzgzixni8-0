@@ -463,6 +463,19 @@ function drawMorphTransition(uRaw) {
     c.fillRect(0, 0, G.W(), G.H());
     c.restore();
   }
+
+  // Narrative Story Text
+  const text = G.storyTexts[G.morphTo];
+  if (text) {
+    const alpha = Math.sin(t * Math.PI); // Fade in and out
+    c.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    c.font = 'bold 18px Courier New';
+    c.textAlign = 'center';
+    const lines = text.split('\n');
+    lines.forEach((line, i) => {
+      c.fillText(line, G.W() / 2, G.H() / 2 + 100 + i * 25);
+    });
+  }
 }
 
 function triggerMorph(reason) {

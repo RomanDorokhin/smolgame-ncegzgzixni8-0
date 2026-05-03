@@ -11,6 +11,13 @@ export const G = {
   stageIndex: 0,
   gameMode: 0,
   cycle: 0,
+  storyTexts: [
+    "ТЫ — ИСКРА ВОЛИ.\nСОБЕРИ ПОЗВОНКИ, ЧТОБЫ ВСТАТЬ.",
+    "ТЫ — РАСТУЩИЙ ГОЛОД.\nСПЛЕТИ ПЛОТЬ, ЧТОБЫ ДВИГАТЬСЯ.",
+    "ТЫ — РИТМИЧНЫЙ ПУЛЬС.\nРАЗБЕЙ СКОРПУПУ СОМНЕНИЙ.",
+    "ТЫ — СГУСТОК ГНЕВА.\nПРОНЗИ ТЕНИ СТРАХА.",
+    "ТЫ — ХРУПКОЕ ДЫХАНИЕ.\nПОДНИМИСЬ НАД ЦИКЛОМ."
+  ],
 
   morphing: false,
   morphT: 0,
@@ -92,11 +99,10 @@ if (typeof window !== 'undefined') {
 
 export function resetCarryover() {
   G.carryover = {
-    jumperCrystals: 0,
-    snakeMeals: 0,
-    bricksCleared: 0,
-    shooterKills: 0,
-    flappyHeight: 0
+    extraHP: 0,
+    shield: 0,
+    power: 0,
+    speed: 1
   };
 }
 
@@ -105,10 +111,13 @@ export function syncGameModeFromStage() {
 }
 
 export function advanceStageAfterMorph() {
-  G.stageIndex = (G.stageIndex + 1) % 5;
-  if (G.stageIndex === 0) {
+  // Cycle shortened to 3 stages for better pacing
+  G.stageIndex++;
+  if (G.stageIndex >= 3) {
     G.cycle++;
-    resetCarryover();
+    G.stageIndex = 0;
+    // Shuffle stages for each new cycle
+    G.stageOrder = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
   }
   syncGameModeFromStage();
 }
