@@ -18,9 +18,10 @@ export const arkanoid = {
     this.height = G.H();
     this.paddleY = this.height - 60;
     this.paddleX = this.width / 2 - this.paddleW / 2;
-    this.paddleW = 80 + (G.carryover.snakeMeals || 0) * 6;
-    const bonus = G.carryover.snakeMeals || 0;
-    this.bricksNeeded = Math.max(5, 10 - Math.floor(bonus / 3));
+    // Use new shield bonus for wider paddle
+    const bonus = G.carryover.shield || 0;
+    this.paddleW = 80 + bonus * 15; 
+    this.bricksNeeded = Math.max(5, 10 - Math.floor(bonus / 2));
     this.bricksCleared = 0;
     this.balls = [];
     this.spawnBall();

@@ -25,7 +25,7 @@ export const flappy = {
     // Lowered distance needed
     this.distanceNeeded = 10;
     this.jumpConsumed = false;
-    G.carryover.flappyHeight = 0;
+    this.shield = G.carryover.extraHP || 0; // Use extraHP from previous stages
   },
 
   update() {
@@ -85,12 +85,19 @@ export const flappy = {
           return;
         }
       }
-      // Collision
+      // Collision with shield logic
       if (p.x < this.x + 8 && p.x + 50 > this.x - 8) {
         if (this.y - 8 < p.topH || this.y + 8 > p.topH + p.gap) {
-          spawnParticles(this.x, this.y, COLORS[4], 16);
-          G.triggerMorph('death');
-          return;
+          if (this.shield > 0) {
+            this.shield--;
+            p.x = -100; // Destroy the pipe
+            spawnParticles(this.x, this.y, '#fff', 20);
+            playSound('collect');
+          } else {
+            spawnParticles(this.x, this.y, COLORS[4], 16);
+            G.triggerMorph('death');
+            return;
+          }
         }
       }
     }

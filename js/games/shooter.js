@@ -23,8 +23,9 @@ export const shooter = {
     this.bullets = [];
     this.enemies = [];
     this.kills = 0;
-    const bonus = G.carryover.bricksCleared || 0;
-    this.killsNeeded = Math.max(4, 8 - Math.floor(bonus / 3));
+    // Use new power bonus for fire rate and kills needed
+    const power = G.carryover.power || 0;
+    this.killsNeeded = Math.max(5, 10 - Math.floor(power / 2));
     this.spawnTimer = 0;
     this.shotTimer = 0;
     this.vy = 0;
@@ -51,9 +52,18 @@ export const shooter = {
     if (this.x > this.width - 15) this.x = this.width - 15;
 
     if (this.shotTimer > 0) this.shotTimer -= G.dt;
+    const power = G.carryover.power || 0;
+    const cooldown = Math.max(5, 12 - power * 2); // Faster firing with power
+    
     if (this.shotTimer <= 0 && (G.keys['ArrowUp'] || G.keys['Space'] || isMovingMobile)) {
-      this.bullets.push({ x: this.x + this.w / 2, y: this.y, vy: -10 });
-      this.shotTimer = 10;
+      if (power >= 3) {
+        // Double Shot
+        this.bullets.push({ x: this.x + this.w / 2 - 8, y: this.y, vy: -12 });
+        this.bullets.push({ x: this.x + this.w / 2 + 8, y: this.y, vy: -12 });
+      } else {
+        this.bullets.push({ x: this.x + this.w / 2, y: this.y, vy: -12 });
+      }
+      this.shotTimer = cooldown;
       playSound('shoot');
     }
 

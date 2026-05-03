@@ -32,10 +32,16 @@ export const boss = {
     // Boss "Attacks" based on current mode
     const mode = G.gameMode;
     
-    if (mode === 0) { // Jumper - Boss drops heavy rain
-      if (Math.random() < 0.05) this.spawnBossHazard();
-    } else if (mode === 3) { // Shooter - Boss shoots back
-      if (Math.random() < 0.03) this.spawnBossProjectile();
+    if (mode === 0) { // Jumper
+      if (Math.random() < 0.04) this.spawnBossHazard();
+    } else if (mode === 1) { // Snake
+      if (this.hazards.length < 1 && Math.random() < 0.01) this.spawnSnakeGhost();
+    } else if (mode === 2) { // Arkanoid
+      if (Math.random() < 0.02) this.spawnBossProjectile();
+    } else if (mode === 3) { // Shooter
+      if (Math.random() < 0.05) this.spawnBossProjectile();
+    } else if (mode === 4) { // Flappy
+      if (Math.random() < 0.03) this.spawnBossHazard();
     }
 
     // Update hazards
@@ -99,43 +105,59 @@ export const boss = {
     const h = this.height;
     
     // Hazards
-    c.fillStyle = '#ef4444';
     for (const haz of this.hazards) {
+      c.fillStyle = haz.color || '#ef4444';
       c.beginPath();
       c.arc(haz.x, haz.y, haz.r, 0, Math.PI * 2);
       c.fill();
     }
 
-    // Boss Silhouette (Shadow Reflection)
+    // Boss Shadow (Reflecting Player)
     c.save();
-    c.globalAlpha = 0.15;
+    c.globalAlpha = 0.2;
     c.fillStyle = '#fff';
     c.shadowColor = COLORS[G.gameMode];
     c.shadowBlur = 40;
     
     const time = performance.now() * 0.002;
-    const ox = Math.sin(time) * 20;
-    const oy = Math.cos(time * 0.5) * 10;
+    const ox = Math.sin(time) * 30;
+    const oy = Math.cos(time * 0.5) * 20;
     
     c.translate(w / 2 + ox, h / 3 + oy);
-    const scale = 8 + Math.sin(time * 0.5) * 0.5;
-    c.scale(scale, scale);
     
-    // Simplified Boss Shape (Abstract)
-    c.beginPath();
-    c.arc(0, 0, 20, 0, Math.PI * 2);
-    c.fill();
+    // Draw an abstract large version of current mode
+    const scale = 4;
+    c.scale(scale, scale);
+    const modeObj = G.getModeObject();
+    if (modeObj && modeObj.draw) {
+        // Draw centered and simplified
+        c.save();
+        c.translate(-20, -20); // Center the phantom
+        modeObj.draw(true); // Draw ghost version if supported
+        c.restore();
+    } else {
+        c.beginPath();
+        c.arc(0, 0, 30, 0, Math.PI * 2);
+        c.fill();
+    }
     c.restore();
 
+    // Narrative floating text
+    if (this.hp > 0 && this.timer % 300 < 100) {
+        const lines = ["ТЫ — ЭТО Я", "ЗАЧЕМ МЕНЯТЬСЯ?", "ОСТАНЬСЯ В ЦИКЛЕ", "СТРАХ — ЭТО ТЫ"];
+        c.fillStyle = "rgba(255,255,255,0.4)";
+        c.font = "italic 16px Courier New";
+        c.textAlign = "center";
+        c.fillText(lines[G.cycle % lines.length], w/2, h/3 - 60);
+    }
+
     // Boss Health Bar
-    const barW = 200;
-    const barH = 4;
+    const barW = 240;
+    const barH = 2;
     const bx = (w - barW) / 2;
-    const by = 40;
-    
+    const by = 50;
     c.fillStyle = 'rgba(255,255,255,0.1)';
     c.fillRect(bx, by, barW, barH);
-    
     const fillW = (this.hp / this.maxHp) * barW;
     c.fillStyle = '#fff';
     c.fillRect(bx, by, fillW, barH);
@@ -157,6 +179,17 @@ export const boss = {
       vx: (Math.random() - 0.5) * 6,
       vy: 4,
       r: 5
+    });
+  },
+
+  spawnSnakeGhost() {
+    this.hazards.push({
+      x: Math.random() * G.W(),
+      y: -20,
+      vx: (Math.random() - 0.5) * 4,
+      vy: 3,
+      r: 12,
+      color: '#000'
     });
   }
 };
