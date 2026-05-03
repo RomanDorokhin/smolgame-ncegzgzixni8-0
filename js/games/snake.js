@@ -1,7 +1,8 @@
 import { G } from '../gameState.js';
 import { COLORS } from '../constants.js';
-import { spawnParticles } from '../fx.js';
+import { spawnParticles, addTrail } from '../fx.js';
 import { boss } from './boss.js';
+import { playSound } from '../audio.js';
 
 export const snake = {
   body: [],
@@ -119,16 +120,10 @@ export const snake = {
   },
 
   update() {
-    const mod = G.currentMod;
-    let up = G.keys['ArrowUp'];
-    let down = G.keys['ArrowDown'];
-    let left = G.keys['ArrowLeft'];
-    let right = G.keys['ArrowRight'];
-
-    if (mod.name === 'ИНВЕРСИЯ') {
-      [up, down] = [down, up];
-      [left, right] = [right, left];
-    }
+    let up = G.keys['ArrowUp'] || G.keys['KeyW'];
+    let down = G.keys['ArrowDown'] || G.keys['KeyS'];
+    let left = G.keys['ArrowLeft'] || G.keys['KeyA'];
+    let right = G.keys['ArrowRight'] || G.keys['KeyD'];
 
     if (up && this.dir.y !== 1) this.nextDir = { x: 0, y: -1 };
     if (down && this.dir.y !== -1) this.nextDir = { x: 0, y: 1 };

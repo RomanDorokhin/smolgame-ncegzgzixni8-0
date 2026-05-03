@@ -36,6 +36,10 @@ const localG = {
   runMorphCount: 0,
   /** Сколько раз смерть в форме стала перерождением. */
   runDeathCount: 0,
+  lastMorphRealTime: 0,
+  trails: [],
+  dt: 0,
+  lastTime: 0,
   bestScore: 0,
   
   runStartTime: 0,
@@ -48,6 +52,12 @@ const localG = {
     bricksCleared: 0,
     shooterKills: 0,
     flappyHeight: 0,
+    enemies: [],
+    bullets: [],
+    kills: 0,
+    shotTimer: 0,
+    vy: 0,
+    killsNeeded: 10
   },
 
   modifiers: [

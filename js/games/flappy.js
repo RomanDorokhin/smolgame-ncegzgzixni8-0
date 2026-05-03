@@ -37,9 +37,14 @@ export const flappy = {
     this.y += this.vy * G.dt;
 
     if (G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump) {
-      this.vy = jump;
-      playSound('jump');
-      if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+      if (!this.jumpConsumed) {
+        this.vy = jump;
+        this.jumpConsumed = true;
+        playSound('jump');
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+      }
+    } else {
+      this.jumpConsumed = false;
     }
     addTrail(this.x, this.y, COLORS[4]);
 

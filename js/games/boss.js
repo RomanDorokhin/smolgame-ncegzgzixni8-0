@@ -17,6 +17,7 @@ export const boss = {
     this.maxHp = this.hp;
     this.timer = 0;
     this.phase = 0;
+    this.hazards = []; // Initialize hazards
   },
 
   update() {
@@ -37,8 +38,30 @@ export const boss = {
       if (Math.random() < 0.03) this.spawnBossProjectile();
     }
 
-    // Boss takes damage from "winning actions" in subgames
-    // (This logic is tied back from subgames calling boss.damage())
+    // Update hazards
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const h = this.hazards[i];
+      if (h.vx) h.x += h.vx * G.dt;
+      h.y += h.vy * G.dt;
+
+      // Simple collision check with player
+      // We'll approximate player positions across modes
+      let px = 0, py = 0, pr = 15;
+      const m = G.getModeObject();
+      if (m) {
+        px = m.x || m.paddleX || (m.body && m.body[0] ? m.body[0].x * (m.cellSize || 20) : 0);
+        py = m.y || m.paddleY || (m.body && m.body[0] ? m.body[0].y * (m.cellSize || 20) : 0);
+      }
+
+      const dist = Math.hypot(px - h.x, py - h.y);
+      if (dist < h.r + pr) {
+        G.triggerMorph('death');
+      }
+
+      if (h.y > G.H() + 50 || h.x < -50 || h.x > G.W() + 50) {
+        this.hazards.splice(i, 1);
+      }
+    }
   },
 
   damage(amt) {
@@ -60,6 +83,14 @@ export const boss = {
     const w = this.width;
     const h = this.height;
     
+    // Hazards
+    c.fillStyle = '#ef4444';
+    for (const haz of this.hazards) {
+      c.beginPath();
+      c.arc(haz.x, haz.y, haz.r, 0, Math.PI * 2);
+      c.fill();
+    }
+
     // Boss Silhouette (Shadow Reflection)
     c.save();
     c.globalAlpha = 0.15;
@@ -75,11 +106,6 @@ export const boss = {
     const scale = 8 + Math.sin(time * 0.5) * 0.5;
     c.scale(scale, scale);
     
-    // Draw boss as a large version of current form
-    import('./' + ['jumper','snake','arkanoid','shooter','flappy'][G.gameMode] + '.js').then(m => {
-       // Note: Dynamic import in draw is slow, but we'll use a cached version or simplified shape
-    });
-    
     // Simplified Boss Shape (Abstract)
     c.beginPath();
     c.arc(0, 0, 20, 0, Math.PI * 2);
@@ -87,22 +113,17 @@ export const boss = {
     c.restore();
 
     // Boss Health Bar
-    const barW = 300;
-    const barH = 6;
+    const barW = 200;
+    const barH = 4;
     const bx = (w - barW) / 2;
     const by = 40;
     
-    c.fillStyle = 'rgba(255,255,255,0.05)';
+    c.fillStyle = 'rgba(255,255,255,0.1)';
     c.fillRect(bx, by, barW, barH);
     
     const fillW = (this.hp / this.maxHp) * barW;
     c.fillStyle = '#fff';
     c.fillRect(bx, by, fillW, barH);
-    
-    c.fillStyle = 'rgba(255,255,255,0.5)';
-    c.font = '10px Courier New';
-    c.textAlign = 'center';
-    c.fillText('СТРАЖ ЦИКЛА', w / 2, by - 8);
   },
 
   hazards: [],
@@ -111,7 +132,7 @@ export const boss = {
       x: Math.random() * G.W(),
       y: -20,
       vy: 4 + Math.random() * 4,
-      r: 10
+      r: 8
     });
   },
   
@@ -119,9 +140,9 @@ export const boss = {
     this.hazards.push({
       x: G.W() / 2,
       y: 100,
-      vx: (Math.random() - 0.5) * 10,
-      vy: 5,
-      r: 6
+      vx: (Math.random() - 0.5) * 6,
+      vy: 4,
+      r: 5
     });
   }
 };

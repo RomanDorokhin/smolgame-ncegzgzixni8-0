@@ -12,6 +12,9 @@ import { playSound } from './audio.js';
 
 const GAMES = [jumper, snake, arkanoid, shooter, flappy];
 
+// Register helper for boss collision and snapshots
+G.getModeObject = () => GAMES[G.gameMode];
+
 const LS_BEST = 'metamorphosis_best_v1';
 
 G.canvas = document.getElementById('gameCanvas');
@@ -195,8 +198,6 @@ function loop(timestamp) {
   if (G.cycle >= 5 && !G.isVictory) boss.draw();
   drawParticles();
 
-  c.restore();
-
   // 3. UI
   document.getElementById('score').textContent = Math.floor(G.score);
   saveBestIfNeeded();
@@ -284,7 +285,10 @@ function loop(timestamp) {
     if (isJumpMode && G.running && !G.morphing && !G._hintShown) {
       hintEl.classList.remove('hidden');
       G._hintShown = true;
-      setTimeout(() => { hintEl.classList.add('hidden'); }, 3000);
+      if (!G.hintTimer) G.hintTimer = performance.now();
+    }
+    if (isJumpMode && G.hintTimer && performance.now() - G.hintTimer > 3000) {
+      hintEl.classList.add('hidden');
     }
     if (!isJumpMode) G._hintShown = false;
   }
@@ -331,7 +335,7 @@ function startEndless() {
   const overlay = document.getElementById('victoryOverlay');
   if (overlay) overlay.classList.add('hidden');
   G.running = true;
-  loop();
+  G.rafId = requestAnimationFrame(loop);
 }
 
 function resize() {

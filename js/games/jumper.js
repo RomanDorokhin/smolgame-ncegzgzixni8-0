@@ -14,6 +14,23 @@ export const jumper = {
   crystalsCollected: 0,
   crystalsNeeded: 5,
 
+  spawnPlatform(idx) {
+    const y = this.y - 120 - idx * 70;
+    const pw = 80 + Math.random() * 60;
+    const x = Math.random() * (G.W() - pw);
+    const hasMine = (G.cycle >= 3 && Math.random() < 0.25);
+    this.platforms.push({ x, y, w: pw, h: 15, mine: hasMine });
+    if (idx > 0 && Math.random() < 0.4 && !hasMine) {
+      this.crystals.push({
+        x: x + pw / 2 - 8,
+        y: y - 30,
+        w: 16, h: 16,
+        collected: false,
+        pulse: Math.random() * 10
+      });
+    }
+  },
+
   init() {
     this.x = G.W() / 2 - 18;
     this.y = G.H() - 150; // Spawn slightly higher
@@ -108,18 +125,21 @@ export const jumper = {
       }
     }
 
-    if (this.x > this.width) this.x = 0;
+    if (this.x > G.W()) this.x = 0;
 
     // Camera follow upward
-    const targetCamY = Math.min(0, this.height - this.y - 200);
+    const targetCamY = Math.min(0, -this.y + G.H() * 0.4);
     this.camY += (targetCamY - this.camY) * 0.1;
 
     // Crystal collection
     for (const c of this.crystals) {
       if (c.collected) continue;
       if (
-        this.x > c.x && this.x < c.x + c.w &&
-        this.y > c.y && this.y < c.y + c.h
+        !c.collected &&
+        this.x + this.w > c.x &&
+        this.x < c.x + c.w &&
+        this.y + this.h > c.y &&
+        this.y < c.y + c.h
       ) {
         c.collected = true;
         this.crystalsCollected++;
@@ -136,8 +156,8 @@ export const jumper = {
     }
 
     // Death by falling
-    if (this.y > this.height + 100) {
-      spawnParticles(this.x, this.height, COLORS[0], 16);
+    if (this.y > this.camY + G.H() + 100) {
+      spawnParticles(this.x, G.H(), COLORS[0], 16);
       G.triggerMorph('death');
     }
 
@@ -187,7 +207,8 @@ export const jumper = {
     c.fillStyle = col;
     c.shadowColor = col;
     c.shadowBlur = 15;
-    c.fillRect(this.x - this.w / 2, this.y - this.h / 2, this.w, this.h);
+    // Draw from left corner as per physics logic
+    c.fillRect(this.x, this.y, this.w, this.h);
     c.shadowBlur = 0;
 
     // Eyes

@@ -12,6 +12,8 @@ export const shooter = {
   killsNeeded: 8,
   spawnTimer: 0,
   width: 0, height: 0,
+  shotTimer: 0,
+  vy: 0,
 
   init() {
     this.width = G.W();
@@ -24,6 +26,8 @@ export const shooter = {
     const bonus = G.carryover.bricksCleared || 0;
     this.killsNeeded = Math.max(4, 8 - Math.floor(bonus / 3));
     this.spawnTimer = 0;
+    this.shotTimer = 0;
+    this.vy = 0;
   },
 
   update() {
@@ -32,27 +36,28 @@ export const shooter = {
     if (mod.name === 'УСКОРЕНИЕ') spd = 6.5;
 
     // Move
-    if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.x -= spd;
-    if (G.keys['ArrowRight'] || G.keys['KeyD']) this.x += spd;
-    this.x = Math.max(16, Math.min(this.width - 16, this.x));
+    const speed = 6 * G.dt;
+    let isMovingMobile = false;
 
-    // Shoot
-    this.spawnTimer++;
-    const fireRate = mod.name === 'УСКОРЕНИЕ' ? 12 : 18;
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const isMovingMobile = isMobile && (G.keys['ArrowLeft'] || G.keys['ArrowRight']);
-    this.y += this.vy * G.dt;
-    if (this.y < 0) this.y = 0;
-    if (this.y > G.H() - this.h) this.y = G.H() - this.h;
+    if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.x -= speed;
+    if (G.keys['ArrowRight'] || G.keys['KeyD']) this.x += speed;
 
-    addTrail(this.x + this.w / 2, this.y + this.h / 2, COLORS[3]);
+    if (G.touchDir !== 0) {
+      this.x += G.touchDir * speed;
+      isMovingMobile = true;
+    }
+
+    if (this.x < 15) this.x = 15;
+    if (this.x > this.width - 15) this.x = this.width - 15;
 
     if (this.shotTimer > 0) this.shotTimer -= G.dt;
-    if (this.shotTimer <= 0 && (G.keys['ArrowUp'] || G.keys['Space'] || (isMovingMobile && G.isMobile))) {
+    if (this.shotTimer <= 0 && (G.keys['ArrowUp'] || G.keys['Space'] || isMovingMobile)) {
       this.bullets.push({ x: this.x + this.w / 2, y: this.y, vy: -10 });
       this.shotTimer = 10;
       playSound('shoot');
     }
+
+    addTrail(this.x + this.w / 2, this.y + this.h / 2, COLORS[3]);
 
     for (const b of this.bullets) {
       b.y += b.vy * G.dt;
