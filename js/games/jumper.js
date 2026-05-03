@@ -15,6 +15,8 @@ export const jumper = {
   crystalsNeeded: 5,
   cellSize: 20,
   spawnTimer: 0,
+  jumpsLeft: 0,
+  maxJumps: 2,
 
   spawnPlatform(idx) {
     const y = this.y - 120 - idx * 70;
@@ -47,6 +49,7 @@ export const jumper = {
     this.platforms = [];
     this.crystalsCollected = 0;
     this.crystalsNeeded = 5 + G.cycle * 2;
+    this.jumpsLeft = this.maxJumps;
 
     // Guaranteed FULL WIDTH start platform
     this.platforms.push({ 
@@ -81,7 +84,7 @@ export const jumper = {
           pulse: Math.random() * 10
         });
       }
-      curY -= 110 + Math.random() * 30; // Better distance for jumping
+      curY -= 90 + Math.random() * 30; // More comfortable distance
     }
   },
 
@@ -98,16 +101,23 @@ export const jumper = {
     this.x += this.vx;
     this.y += this.vy * G.dt;
 
-    if (G.touchJump && this.grounded) {
+    const canJump = this.grounded || this.jumpsLeft > 0;
+    const wantJump = G.touchJump || G.keys['ArrowUp'] || G.keys['Space'];
+
+    if (wantJump && canJump && !this.jumpPressed) {
+      if (!this.grounded) {
+        // Double jump effect
+        spawnParticles(this.x + this.w/2, this.y + this.h, COLORS[0], 8);
+        this.jumpsLeft--;
+      } else {
+        this.jumpsLeft = this.maxJumps - 1;
+      }
       this.vy = jump;
       this.grounded = false;
+      this.jumpPressed = true;
       playSound('jump');
     }
-    if (G.keys['ArrowUp'] && this.grounded) {
-      this.vy = jump;
-      this.grounded = false;
-      playSound('jump');
-    }
+    if (!wantJump) this.jumpPressed = false;
 
     addTrail(this.x + 18, this.y + 18, COLORS[0]);
 
@@ -124,6 +134,7 @@ export const jumper = {
         this.y = p.y - this.h;
         this.vy = 0;
         this.grounded = true;
+        this.jumpsLeft = this.maxJumps;
         
         if (p.mine) {
            spawnParticles(this.x + this.w/2, this.y + this.h, '#ef4444', 20);
