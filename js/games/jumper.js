@@ -32,22 +32,27 @@ export const jumper = {
   },
 
   init() {
-    this.x = G.W() / 2 - 18;
-    this.y = G.H() - 150; // Spawn slightly higher
-    this.vx = 0; this.vy = 0;
-    this.camY = this.y - G.H() * 0.5;
+    this.w = 36;
+    this.h = 36;
+    this.x = G.W() / 2 - this.w / 2;
+    this.y = G.H() - 200; 
+    this.vx = 0; 
+    this.vy = 0;
+    
+    this.camY = -this.y + G.H() * 0.6; // Correctly center camera at start
     this.crystals = [];
     this.platforms = [];
     this.crystalsCollected = 0;
     this.crystalsNeeded = 5 + G.cycle * 2;
 
     // Guaranteed safe start platform
-    const startPW = 200;
+    const startPW = 220;
     this.platforms.push({ 
-      x: this.x - startPW / 2 + 18, 
-      y: this.y + 36, 
+      x: this.x - (startPW - this.w) / 2, 
+      y: this.y + this.h, 
       w: startPW, 
-      h: 40 
+      h: 40,
+      mine: false 
     });
     this.grounded = true;
     
@@ -55,7 +60,8 @@ export const jumper = {
     let curY = this.y - 120;
     for (let i = 0; i < 40; i++) {
       const pw = 80 + Math.random() * 60;
-      const hasMine = (G.cycle >= 3 && Math.random() < 0.25);
+      // First 5 platforms are mine-free
+      const hasMine = (i > 5 && G.cycle >= 3 && Math.random() < 0.25);
       this.platforms.push({
         x: Math.random() * (G.W() - pw),
         y: curY,
