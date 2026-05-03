@@ -1,6 +1,6 @@
 import { MODES, COLORS, PALETTES } from './constants.js';
 
-const localG = {
+export const G = {
   canvas: null,
   ctx: null,
   W() { return window.innerWidth; },
@@ -33,9 +33,7 @@ const localG = {
   touchJump: false,
   touchDir: 0,
 
-  /** Метаморфоз за текущий забег (глубина «жизни»). */
   runMorphCount: 0,
-  /** Сколько раз смерть в форме стала перерождением. */
   runDeathCount: 0,
   lastMorphRealTime: 0,
   trails: [],
@@ -45,19 +43,14 @@ const localG = {
   runStartTime: 0,
   isVictory: false,
   isEndless: false,
+  bossInited: false,
 
   carryover: {
     jumperCrystals: 0,
     snakeMeals: 0,
     bricksCleared: 0,
     shooterKills: 0,
-    flappyHeight: 0,
-    enemies: [],
-    bullets: [],
-    kills: 0,
-    shotTimer: 0,
-    vy: 0,
-    killsNeeded: 10
+    flappyHeight: 0
   },
 
   modifiers: [
@@ -72,13 +65,12 @@ const localG = {
     return this.modifiers[Math.min(this.cycle, this.modifiers.length - 1)];
   },
 
-  /** Визуальные признаки эволюции */
   get evolutionFeatures() {
     const features = [];
-    if (this.cycle >= 1) features.push('glow');   // Свечение
-    if (this.cycle >= 2) features.push('trails'); // Шлейф
-    if (this.cycle >= 3) features.push('wings');  // Крылья (визуально)
-    if (this.cycle >= 4) features.push('aura');   // Аура силы
+    if (this.cycle >= 1) features.push('glow');
+    if (this.cycle >= 2) features.push('trails');
+    if (this.cycle >= 3) features.push('wings');
+    if (this.cycle >= 4) features.push('aura');
     return features;
   },
 
@@ -88,18 +80,13 @@ const localG = {
   get COLORS() {
     const pIndex = Math.min(this.cycle, PALETTES.length - 1);
     return PALETTES[pIndex];
-  },
-  
-  getColor(idx) {
-    return this.COLORS[idx] || '#fff';
   }
 };
 
+// Global singleton for cross-module access in ESM
 if (typeof window !== 'undefined') {
-  if (!window._G_SINGLETON) window._G_SINGLETON = localG;
+  window.G = G;
 }
-
-export const G = typeof window !== 'undefined' ? window._G_SINGLETON : localG;
 
 export function resetCarryover() {
   G.carryover = {
@@ -107,13 +94,7 @@ export function resetCarryover() {
     snakeMeals: 0,
     bricksCleared: 0,
     shooterKills: 0,
-    flappyHeight: 0,
-    enemies: [],
-    bullets: [],
-    kills: 0,
-    shotTimer: 0,
-    vy: 0,
-    killsNeeded: 10
+    flappyHeight: 0
   };
 }
 
