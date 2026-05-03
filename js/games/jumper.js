@@ -65,22 +65,38 @@ export const jumper = {
     });
     this.grounded = true;
     
-    // Gen platforms higher up
+    // Gen platforms higher up with reachability checks
+    let lastP = this.platforms[0];
+    let minesInARow = 0;
     let curY = this.y - 120;
+
     for (let i = 0; i < 150; i++) {
       const difficulty = Math.min(1, i / 100);
-      const pw = (90 - difficulty * 30) + Math.random() * 40;
-      const hasMine = (i > 10 && Math.random() < 0.05 + difficulty * 0.15);
-      const plat = {
-        x: Math.random() * (G.W() - pw),
-        y: curY,
-        w: pw,
-        h: 15,
-        mine: hasMine
-      };
-      this.platforms.push(plat);
+      const pw = Math.max(70, (100 - difficulty * 30) + Math.random() * 40);
       
-      // Crystals spaced out every ~6 platforms, but ONLY on safe ones
+      // Try to find a reachable position
+      let px = Math.random() * (G.W() - pw);
+      let attempts = 0;
+      while (attempts < 10) {
+        const dist = Math.abs(px + pw/2 - (lastP.x + lastP.w/2));
+        if (dist < 250) break; // Reachable horizontal distance
+        px = Math.random() * (G.W() - pw);
+        attempts++;
+      }
+
+      let hasMine = (i > 10 && Math.random() < 0.1 + difficulty * 0.15);
+      if (hasMine) {
+        minesInARow++;
+        if (minesInARow > 2) { hasMine = false; minesInARow = 0; }
+      } else {
+        minesInARow = 0;
+      }
+
+      const plat = { x: px, y: curY, w: pw, h: 15, mine: hasMine };
+      this.platforms.push(plat);
+      lastP = plat;
+      
+      // Crystals on safe and reachable platforms
       if (i > 0 && i % 6 === 0 && !plat.mine) {
         this.crystals.push({
           x: plat.x + pw / 2 - 12,
@@ -90,7 +106,7 @@ export const jumper = {
           pulse: Math.random() * 10
         });
       }
-      curY -= 120 + difficulty * 20 + Math.random() * 20;
+      curY -= Math.min(150, 110 + difficulty * 20 + Math.random() * 20);
     }
   },
 
