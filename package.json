@@ -1,0 +1,14 @@
+{
+  "name": "metamorphosis-game",
+  "version": "1.0.0",
+  "description": "Metamorphosis - A cycle-based transformation game for Telegram",
+  "main": "js/main.js",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "dev": "npx serve .",
+    "serve": "python3 -m http.server 8080"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
