@@ -13,7 +13,7 @@ export const boss = {
   init() {
     this.width = G.W();
     this.height = G.H();
-    this.hp = 100 + G.cycle * 20;
+    this.hp = 80 + G.cycle * 15; // Slightly lower HP for reachability
     this.maxHp = this.hp;
     this.timer = 0;
     this.phase = 0;
