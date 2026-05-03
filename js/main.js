@@ -22,10 +22,16 @@ const GAMES = [jumper, snake, arkanoid, shooter, flappy];
 // Register helper for boss collision and snapshots
 G.getModeObject = () => GAMES[G.gameMode];
 
-G.canvas = document.getElementById('gameCanvas');
-if (G.canvas) {
-  G.ctx = G.canvas.getContext('2d');
-  bindInput(G.canvas);
+function initCanvas() {
+  if (G.canvas) return true;
+  G.canvas = document.getElementById('gameCanvas');
+  if (G.canvas) {
+    G.ctx = G.canvas.getContext('2d');
+    bindInput(G.canvas);
+    return true;
+  }
+  console.error("Canvas element #gameCanvas not found!");
+  return false;
 }
 
 // Telegram Init
@@ -100,6 +106,11 @@ function loop(timestamp) {
   if (!G.running) return;
   G.rafId = requestAnimationFrame(loop);
 
+  if (!G.ctx) {
+    console.error("Loop stopped: G.ctx is null");
+    G.running = false;
+    return;
+  }
   G.dt = getDeltaTime(timestamp);
   if (G.dt === 0) return; // Wait for second frame to have valid delta
 
@@ -200,24 +211,34 @@ function loop(timestamp) {
 }
 
 function startGame() {
-  hideAllOverlays();
-  G.score = 0;
-  G.cycle = 0;
-  G.stageIndex = 0;
-  G.gameMode = G.stageOrder[0];
-  G.runMorphCount = 0;
-  G.runDeathCount = 0;
-  G.runStartTime = performance.now();
-  G.isVictory = false;
-  G.isEndless = false;
-  G.bossInited = false;
-  G._hintShown = false;
-  G.hintTimer = 0;
-  resetCarryover();
-  
-  G.running = true;
-  initCurrentGame();
-  startLoop(loop);
+  try {
+    if (!initCanvas()) {
+      alert("Ошибка: Не удалось найти игровое поле (Canvas).");
+      return;
+    }
+    hideAllOverlays();
+    G.score = 0;
+    G.cycle = 0;
+    G.stageIndex = 0;
+    G.gameMode = G.stageOrder[0];
+    G.runMorphCount = 0;
+    G.runDeathCount = 0;
+    G.runStartTime = performance.now();
+    G.isVictory = false;
+    G.isEndless = false;
+    G.bossInited = false;
+    G._hintShown = false;
+    G.hintTimer = 0;
+    G.paused = false;
+    resetCarryover();
+    
+    G.running = true;
+    initCurrentGame();
+    startLoop(loop);
+    console.log("Game started successfully.");
+  } catch (err) {
+    console.error("Failed to start game:", err);
+  }
 }
 
 function showVictory() {

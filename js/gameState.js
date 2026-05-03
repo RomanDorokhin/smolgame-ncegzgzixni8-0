@@ -36,6 +36,8 @@ export const G = {
   runMorphCount: 0,
   runDeathCount: 0,
   lastMorphRealTime: 0,
+  _hintShown: false,
+  hintTimer: 0,
   trails: [],
   dt: 0,
   bestScore: 0,
