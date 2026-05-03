@@ -61,16 +61,27 @@ export const jumper = {
     // Gen platforms higher up
     let curY = this.y - 120;
     for (let i = 0; i < 40; i++) {
-      const pw = 100 + Math.random() * 60;
+      const pw = 100 + Math.random() * 70;
       const hasMine = (i > 5 && G.cycle >= 3 && Math.random() < 0.2);
-      this.platforms.push({
+      const plat = {
         x: Math.random() * (G.W() - pw),
         y: curY,
         w: pw,
         h: 15,
         mine: hasMine
-      });
-      curY -= 130 + Math.random() * 30;
+      };
+      this.platforms.push(plat);
+      
+      if (Math.random() < 0.4 && !hasMine) {
+        this.crystals.push({
+          x: plat.x + pw / 2 - 8,
+          y: curY - 30,
+          w: 16, h: 16,
+          collected: false,
+          pulse: Math.random() * 10
+        });
+      }
+      curY -= 110 + Math.random() * 30; // Better distance for jumping
     }
   },
 
