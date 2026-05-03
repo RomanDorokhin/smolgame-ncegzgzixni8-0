@@ -1,3 +1,11 @@
+console.log("Metamorphosis: main.js loading...");
+window.onerror = function(msg, url, line, col, error) {
+  const err = `Error: ${msg}\nLine: ${line}\nCol: ${col}\nUrl: ${url}`;
+  console.error(err);
+  // alert(err); // Optional: uncomment if debugging on mobile without console
+  return false;
+};
+
 import { G, resetCarryover, syncGameModeFromStage } from './gameState.js';
 import { bindInput } from './input.js';
 import { initStars, drawBg, updateParticles, drawParticles, updateTrails, drawTrails } from './fx.js';
@@ -295,8 +303,25 @@ document.addEventListener('visibilitychange', () => {
   G.paused = document.hidden;
 });
 
-const startBtn = document.getElementById('startBtn');
-if (startBtn) startBtn.addEventListener('click', startGame);
+function bindStartButton() {
+  const startBtn = document.getElementById('startBtn');
+  if (startBtn) {
+    console.log("Start button found and bound.");
+    startBtn.onclick = startGame; // Using direct assignment for maximum compatibility
+    startBtn.addEventListener('click', startGame);
+  } else {
+    console.warn("Start button not found in DOM yet...");
+  }
+}
+
+// Bind as soon as possible
+bindStartButton();
+
+// And again on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', bindStartButton);
+
+// And again on window load
+window.onload = bindStartButton;
 
 const shareBtn = document.getElementById('shareBtn');
 if (shareBtn) shareBtn.addEventListener('click', () => {
