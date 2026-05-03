@@ -5,6 +5,7 @@ const ctx = () => G.ctx;
 
 export function spawnParticles(x, y, color, count = 12) {
   for (let i = 0; i < count; i++) {
+    if (G.particles.length > 50) return; // Cap for performance
     const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
     const speed = 2 + Math.random() * 4;
     G.particles.push({
@@ -66,9 +67,8 @@ export function drawParticles() {
       c.shadowBlur = 0;
     } else {
       c.fillStyle = p.color;
-      c.beginPath();
-      c.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      c.fill();
+      const s = p.size;
+      c.fillRect(p.x - s/2, p.y - s/2, s, s);
     }
   }
   c.globalAlpha = 1;
@@ -91,9 +91,8 @@ export function drawTrails() {
   for (const t of G.trails) {
     c.globalAlpha = t.life * 0.3;
     c.fillStyle = t.color;
-    c.beginPath();
-    c.arc(t.x, t.y, 10 * t.life, 0, Math.PI * 2);
-    c.fill();
+    const s = 10 * t.life;
+    c.fillRect(t.x - s/2, t.y - s/2, s, s);
   }
   c.globalAlpha = 1;
 }
@@ -124,9 +123,7 @@ export function drawBg() {
   for (const s of G.bgStars) {
     c.globalAlpha = s.a * 0.6;
     c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    c.fill();
+    c.fillRect(s.x, s.y, s.r * 2, s.r * 2);
     s.y += s.speed;
     if (s.y > G.H()) { s.y = 0; s.x = Math.random() * G.W(); }
   }

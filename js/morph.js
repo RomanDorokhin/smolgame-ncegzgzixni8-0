@@ -481,6 +481,10 @@ function drawMorphTransition(uRaw) {
 function triggerMorph(reason) {
   if (G.morphing) return;
   
+  // Clear any potential overlaps
+  G.touchDir = 0;
+  G.touchJump = false;
+  
   // Cooldown check (8 seconds), but ignore for death
   const now = performance.now();
   if (reason !== 'death' && G.lastMorphRealTime && (now - G.lastMorphRealTime < 8000)) {

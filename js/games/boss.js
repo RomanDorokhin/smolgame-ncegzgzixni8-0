@@ -45,7 +45,7 @@ export const boss = {
     }
 
     // Update hazards
-    if (this.hazards.length > 100) this.hazards.shift(); // Cap hazards to prevent lag
+    if (this.hazards.length > 30) this.hazards.shift(); // Hard cap for performance
 
     for (let i = this.hazards.length - 1; i >= 0; i--) {
       const h = this.hazards[i];
@@ -117,7 +117,7 @@ export const boss = {
     c.globalAlpha = 0.2;
     c.fillStyle = '#fff';
     c.shadowColor = COLORS[G.gameMode];
-    c.shadowBlur = 40;
+    c.shadowBlur = 0; // Disable heavy shadows for performance
     
     const time = performance.now() * 0.002;
     const ox = Math.sin(time) * 30;
