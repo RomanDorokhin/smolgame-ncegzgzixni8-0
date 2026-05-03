@@ -19,6 +19,7 @@ export const jumper = {
   maxJumps: 2,
   jumpPressed: false,
   autoScroll: 0,
+  maxReachedY: 0,
 
   spawnPlatform(idx) {
     const y = this.y - 120 - idx * 70;
@@ -44,21 +45,21 @@ export const jumper = {
     this.y = G.H() - 250; 
     this.vx = 0; 
     this.vy = 0;
-    this.spawnTimer = 40; 
+    this.spawnTimer = 60; 
     this.autoScroll = 0;
+    this.maxReachedY = this.y;
     
-    this.camY = 0; 
+    this.camY = -this.y + G.H() * 0.7; 
     this.crystals = [];
     this.platforms = [];
     this.crystalsCollected = 0;
-    this.crystalsNeeded = 7 + G.cycle * 2;
+    this.crystalsNeeded = 7 + G.cycle * 1;
 
-    // First platform: safe
-    const startPW = 160;
+    // Start platform: nice and wide
     this.platforms.push({ 
-      x: this.x - (startPW - this.w) / 2, 
+      x: G.W() / 2 - 100, 
       y: this.y + this.h, 
-      w: startPW, 
+      w: 200, 
       h: 20,
       mine: false 
     });
@@ -66,10 +67,10 @@ export const jumper = {
     
     // Gen platforms higher up
     let curY = this.y - 120;
-    for (let i = 0; i < 100; i++) {
-      const difficulty = Math.min(1, i / 60);
-      const pw = (80 - difficulty * 30) + Math.random() * 50;
-      const hasMine = (i > 3 && Math.random() < 0.1 + difficulty * 0.15);
+    for (let i = 0; i < 150; i++) {
+      const difficulty = Math.min(1, i / 100);
+      const pw = (90 - difficulty * 30) + Math.random() * 40;
+      const hasMine = (i > 10 && Math.random() < 0.05 + difficulty * 0.15);
       const plat = {
         x: Math.random() * (G.W() - pw),
         y: curY,
@@ -79,17 +80,17 @@ export const jumper = {
       };
       this.platforms.push(plat);
       
-      // Crystals every ~4 platforms
-      if (i > 0 && i % 4 === 0) {
+      // Crystals spaced out every ~5-7 platforms
+      if (i > 0 && i % 6 === 0) {
         this.crystals.push({
-          x: plat.x + pw / 2 - 8,
-          y: curY - 30,
-          w: 16, h: 16,
+          x: plat.x + pw / 2 - 10,
+          y: curY - 40,
+          w: 20, h: 20,
           collected: false,
           pulse: Math.random() * 10
         });
       }
-      curY -= 110 + difficulty * 20 + Math.random() * 20;
+      curY -= 120 + difficulty * 20 + Math.random() * 20;
     }
   },
 
@@ -152,13 +153,18 @@ export const jumper = {
 
     if (this.x > G.W()) this.x = 0;
 
-    // Camera follow and auto-scroll
-    const targetCamY = Math.min(0, -this.y + G.H() * 0.5);
-    this.camY += (targetCamY - this.camY) * 0.1;
+    // Camera Logic (Classic Jumper Style)
+    // Only move camera up when player climbs higher than maxReachedY
+    if (this.y < this.maxReachedY) {
+      this.maxReachedY = this.y;
+    }
     
-    // Auto-scroll pressure
-    this.autoScroll -= 0.4 * G.dt; 
-    if (this.camY > this.autoScroll) this.camY = this.autoScroll;
+    // Target camY offset to center player on screen as they climb
+    const targetCamY = -this.maxReachedY + G.H() * 0.6;
+    // Camera can only move to make world appear lower (scrolling up)
+    if (targetCamY > this.camY) {
+      this.camY += (targetCamY - this.camY) * 0.1;
+    }
 
     // Crystal collection
     for (const c of this.crystals) {
@@ -183,10 +189,11 @@ export const jumper = {
       c.pulse += 0.1;
     }
 
-    // Death by falling
+    // Death by falling below camera
     if (this.spawnTimer > 0) this.spawnTimer -= G.dt;
-    if (this.spawnTimer <= 0 && this.y > -this.camY + G.H() + 50) {
-      spawnParticles(this.x, G.H(), COLORS[0], 16);
+    const bottomEdge = -this.camY + G.H();
+    if (this.spawnTimer <= 0 && this.y > bottomEdge) {
+      spawnParticles(this.x, this.y, COLORS[0], 16);
       G.triggerMorph('death');
     }
 
