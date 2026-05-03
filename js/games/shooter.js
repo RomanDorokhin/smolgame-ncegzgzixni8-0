@@ -171,7 +171,7 @@ export const shooter = {
     c.fillStyle = '#fff';
     c.font = 'bold 14px Courier New';
     c.textAlign = 'center';
-    c.fillText('УНИЧТОЖЕНО: ' + this.kills + ' / ' + this.killsNeeded, this.width / 2, 40);
+    c.fillText('УНИЧТОЖЕНО: ' + this.kills + ' / ' + this.killsNeeded, G.W() / 2, 40);
     c.textAlign = 'left';
   },
 

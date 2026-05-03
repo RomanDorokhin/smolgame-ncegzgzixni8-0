@@ -56,6 +56,7 @@ export function bindInput(canvas) {
 
   const handleEnd = () => {
     G.touchJump = false;
+    G.touchDir = 0;
     if (G.gameMode === 2 || G.gameMode === 3) {
       G.keys['ArrowLeft'] = false;
       G.keys['ArrowRight'] = false;
@@ -98,9 +99,9 @@ export function bindInput(canvas) {
     }
 
     if (G.gameMode === 2 || G.gameMode === 3) {
-      if (moveX > 2) { G.keys['ArrowRight'] = true; G.keys['ArrowLeft'] = false; }
-      else if (moveX < -2) { G.keys['ArrowLeft'] = true; G.keys['ArrowRight'] = false; }
-      else { G.keys['ArrowLeft'] = false; G.keys['ArrowRight'] = false; }
+      if (moveX > 2) G.touchDir = 1;
+      else if (moveX < -2) G.touchDir = -1;
+      else G.touchDir = 0;
       lastTouchX = t.clientX;
     }
   }, { passive: false });

@@ -31,6 +31,7 @@ const localG = {
   shake: 0,
   keys: {},
   touchJump: false,
+  touchDir: 0,
 
   /** Метаморфоз за текущий забег (глубина «жизни»). */
   runMorphCount: 0,
