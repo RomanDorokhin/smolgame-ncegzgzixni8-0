@@ -38,13 +38,15 @@ export const jumper = {
     let curY = this.y - 120;
     for (let i = 0; i < 40; i++) {
       const pw = 80 + Math.random() * 60;
+      const hasMine = (G.cycle >= 3 && Math.random() < 0.25);
       this.platforms.push({
         x: Math.random() * (G.W() - pw),
         y: curY,
         w: pw,
-        h: 15
+        h: 15,
+        mine: hasMine
       });
-      if (Math.random() < 0.4) {
+      if (Math.random() < 0.4 && !hasMine) {
         this.crystals.push({
           x: this.platforms[this.platforms.length - 1].x + pw / 2 - 8,
           y: curY - 30,
@@ -96,6 +98,13 @@ export const jumper = {
         this.y = p.y - this.h;
         this.vy = 0;
         this.grounded = true;
+        
+        if (p.mine) {
+           spawnParticles(this.x + this.w/2, this.y + this.h, '#ef4444', 20);
+           playSound('death');
+           G.triggerMorph('death');
+           return;
+        }
       }
     }
 
@@ -148,7 +157,19 @@ export const jumper = {
     // Platforms
     c.fillStyle = 'rgba(255,255,255,0.15)';
     for (const p of this.platforms) {
+      c.fillStyle = p.mine ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)';
       c.fillRect(p.x, p.y, p.w, p.h);
+      if (p.mine) {
+        c.fillStyle = '#ef4444';
+        const pulse = Math.sin(performance.now() * 0.015) * 2;
+        c.beginPath();
+        c.arc(p.x + p.w / 2, p.y - 4, 6 + pulse, 0, Math.PI * 2);
+        c.fill();
+        c.shadowColor = '#ef4444';
+        c.shadowBlur = 10;
+        c.fill();
+        c.shadowBlur = 0;
+      }
     }
 
     // Crystals

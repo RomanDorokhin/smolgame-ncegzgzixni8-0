@@ -6,7 +6,8 @@ import { playSound } from '../audio.js';
 
 export const arkanoid = {
   paddleX: 0, paddleY: 0, paddleW: 100, paddleH: 14,
-  ballX: 0, ballY: 0, ballVX: 0, ballVY: 0, ballR: 7,
+  balls: [],
+  ballR: 7,
   bricks: [],
   bricksNeeded: 10,
   bricksCleared: 0,
@@ -21,7 +22,9 @@ export const arkanoid = {
     const bonus = G.carryover.snakeMeals || 0;
     this.bricksNeeded = Math.max(5, 10 - Math.floor(bonus / 3));
     this.bricksCleared = 0;
-    this.resetBall();
+    this.balls = [];
+    this.spawnBall();
+    if (G.cycle >= 3) this.spawnBall(-4); // Second ball for higher cycles
     this.bricks = [];
     const cols = 8;
     const brickW = Math.floor(this.width / cols) - 4;
@@ -41,13 +44,15 @@ export const arkanoid = {
     }
   },
 
-  resetBall() {
-    this.ballX = this.width / 2;
-    this.ballY = this.height - 120;
+  spawnBall(vxOverride = 0) {
     const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.8;
-    const spd = 5 + G.cycle * 0.5;
-    this.ballVX = Math.cos(angle) * spd;
-    this.ballVY = Math.sin(angle) * spd;
+    const spd = 5 + G.cycle * 0.2;
+    this.balls.push({
+      x: this.width / 2,
+      y: this.paddleY - 50,
+      vx: vxOverride || (Math.cos(angle) * spd),
+      vy: Math.sin(angle) * spd
+    });
   },
 
   update() {
@@ -58,62 +63,73 @@ export const arkanoid = {
     if (this.paddleX < 0) this.paddleX = 0;
     if (this.paddleX > G.W() - this.paddleW) this.paddleX = G.W() - this.paddleW;
 
-    this.ballX += this.ballVX * G.dt;
-    this.ballY += this.ballVY * G.dt;
+    for (let i = this.balls.length - 1; i >= 0; i--) {
+      const b = this.balls[i];
+      b.x += b.vx * G.dt;
+      b.y += b.vy * G.dt;
 
-    addTrail(this.ballX, this.ballY, COLORS[2]);
+      addTrail(b.x, b.y, COLORS[2]);
 
-    // Walls
-    if (this.ballX < this.ballR || this.ballX > G.W() - this.ballR) {
-      this.ballVX *= -1;
-      playSound('shoot');
-    }
-    if (this.ballY < this.ballR) {
-      this.ballVY *= -1;
-      playSound('shoot');
-    }
+      // Walls
+      if (b.x < this.ballR || b.x > G.W() - this.ballR) {
+        b.vx *= -1;
+        playSound('shoot');
+      }
+      if (b.y < this.ballR) {
+        b.vy *= -1;
+        playSound('shoot');
+      }
 
-    // Paddle
-    if (this.ballVY > 0 && 
-        this.ballY + this.ballR > this.paddleY &&
-        this.ballX > this.paddleX && this.ballX < this.paddleX + this.paddleW) {
-      this.ballVY *= -1;
-      this.ballY = this.paddleY - this.ballR;
-      playSound('jump');
-    }
+      // Paddle
+      if (b.vy > 0 && 
+          b.y + this.ballR > this.paddleY &&
+          b.x > this.paddleX && b.x < this.paddleX + this.paddleW) {
+        b.vy *= -1;
+        b.y = this.paddleY - this.ballR;
+        const hit = (b.x - (this.paddleX + this.paddleW / 2)) / (this.paddleW / 2);
+        b.vx += hit * 2;
+        playSound('jump');
+      }
 
-    // Death
-    if (this.ballY > G.H() + 50) {
-      spawnParticles(this.ballX, this.height - 10, COLORS[2], 14);
-      G.triggerMorph('death');
-      return;
-    }
+      // Bricks
+      for (const br of this.bricks) {
+        if (!br.alive) continue;
+        if (
+          b.x + this.ballR > br.x &&
+          b.x - this.ballR < br.x + br.w &&
+          b.y + this.ballR > br.y &&
+          b.y - this.ballR < br.y + br.h
+        ) {
+          br.alive = false;
+          b.vy *= -1;
+          this.bricksCleared++;
+          G.carryover.bricksCleared = this.bricksCleared;
+          G.score += 50;
+          if (G.cycle >= 5) boss.damage(5);
+          playSound('collect');
+          if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+          }
+          spawnParticles(br.x + br.w / 2, br.y + br.h / 2, br.color, 8);
+          
+          // Small chance for a new ball on brick break in high cycles
+          if (G.cycle >= 4 && Math.random() < 0.05) this.spawnBall();
 
-    // Bricks
-    for (const b of this.bricks) {
-      if (!b.alive) continue;
-      if (
-        this.ballX + this.ballR > b.x &&
-        this.ballX - this.ballR < b.x + b.w &&
-        this.ballY + this.ballR > b.y &&
-        this.ballY - this.ballR < b.y + b.h
-      ) {
-        b.alive = false;
-        this.ballVY *= -1;
-        this.bricksCleared++;
-        G.carryover.bricksCleared = this.bricksCleared;
-        G.score += 50;
-        if (G.cycle >= 5) boss.damage(5);
-        playSound('collect');
-        if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
-          window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-        }
-        spawnParticles(b.x + b.w / 2, b.y + b.h / 2, b.color, 8);
-        if (this.bricksCleared >= this.bricksNeeded) {
-          G.triggerMorph('objective');
-          return;
+          if (this.bricksCleared >= this.bricksNeeded) {
+            G.triggerMorph('objective');
+            return;
+          }
         }
       }
+
+      // Death check for this ball
+      if (b.y > G.H() + 50) {
+        this.balls.splice(i, 1);
+      }
+    }
+
+    if (this.balls.length === 0) {
+      G.triggerMorph('death');
     }
   },
 
@@ -137,11 +153,13 @@ export const arkanoid = {
     c.fillRect(this.paddleX, this.paddleY, this.paddleW, this.paddleH);
     c.shadowBlur = 0;
 
-    // Ball
+    // Balls
     c.fillStyle = '#fff';
-    c.beginPath();
-    c.arc(this.ballX, this.ballY, this.ballR, 0, Math.PI * 2);
-    c.fill();
+    for (const b of this.balls) {
+      c.beginPath();
+      c.arc(b.x, b.y, this.ballR, 0, Math.PI * 2);
+      c.fill();
+    }
 
     // UI
     c.fillStyle = '#fff';

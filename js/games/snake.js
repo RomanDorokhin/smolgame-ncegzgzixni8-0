@@ -8,6 +8,8 @@ export const snake = {
   dir: { x: 1, y: 0 },
   nextDir: { x: 1, y: 0 },
   food: [],
+  shadowSnake: [],
+  shadowDir: { x: 0, y: 1 },
   mealsEaten: 0,
   mealsNeeded: 5,
   cellSize: 20,
@@ -42,6 +44,15 @@ export const snake = {
     this.spawnFood();
     this.spawnFood();
     this.ensureMealsOnField();
+
+    // Shadow Snake (Enemy)
+    this.shadowSnake = [];
+    if (G.cycle >= 3) {
+      const sx = this.gridW - 4;
+      const sy = this.gridH - 4;
+      for (let i = 0; i < 6; i++) this.shadowSnake.push({ x: sx, y: sy + i });
+      this.shadowDir = { x: 0, y: -1 };
+    }
   },
 
   spawnFood() {
@@ -200,6 +211,38 @@ export const snake = {
     if (!ate) this.body.shift();
     this.ensureMealsOnField();
     for (const f of this.food) f.pulse += 0.12;
+
+    // Move Shadow Snake
+    if (this.shadowSnake.length > 0) {
+      if (Math.random() < 0.1) {
+        const r = Math.random();
+        if (r < 0.25) this.shadowDir = { x: 0, y: -1 };
+        else if (r < 0.5) this.shadowDir = { x: 0, y: 1 };
+        else if (r < 0.75) this.shadowDir = { x: -1, y: 0 };
+        else this.shadowDir = { x: 1, y: 0 };
+      }
+      
+      const sh = this.shadowSnake[this.shadowSnake.length - 1];
+      let snx = sh.x + this.shadowDir.x;
+      let sny = sh.y + this.shadowDir.y;
+      
+      // Wrap shadow snake
+      if (snx < 0) snx = this.gridW - 1;
+      if (snx >= this.gridW) snx = 0;
+      if (sny < 0) sny = this.gridH - 1;
+      if (sny >= this.gridH) sny = 0;
+      
+      this.shadowSnake.push({ x: snx, y: sny });
+      this.shadowSnake.shift();
+
+      // Check collision: Player Head hits Shadow Snake
+      if (this.shadowSnake.find(s => s.x === nx && s.y === ny)) {
+        spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#000', 30);
+        playSound('death');
+        G.triggerMorph('death');
+        return;
+      }
+    }
   },
 
   draw(skipPlayer = false) {
@@ -249,6 +292,22 @@ export const snake = {
         c.fill();
         c.shadowBlur = 0;
       }
+    }
+
+    // Shadow Snake
+    if (this.shadowSnake.length > 0) {
+      c.globalAlpha = 0.4;
+      c.shadowBlur = 10;
+      c.shadowColor = '#fff';
+      for (let i = 0; i < this.shadowSnake.length; i++) {
+        const s = this.shadowSnake[i];
+        c.fillStyle = '#1e1b4b'; // Deep indigo ghost
+        c.beginPath();
+        c.arc(fx + s.x * cs + cs / 2, fy + s.y * cs + cs / 2, cs / 2, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.shadowBlur = 0;
+      c.globalAlpha = 1;
     }
 
     if (this.huntingJumper && this.jumperPrey) {

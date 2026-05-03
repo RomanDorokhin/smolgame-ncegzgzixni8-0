@@ -60,18 +60,25 @@ export const shooter = {
 
     // Spawn enemies
     if (Math.random() < 0.02 + G.cycle * 0.003) {
+      const isHunter = G.cycle >= 3 && Math.random() < 0.3;
       this.enemies.push({
         x: Math.random() * (this.width - 30) + 15,
         y: -20,
         vy: 1.5 + Math.random() * 1.5 + G.cycle * 0.2,
-        r: 14,
-        hp: 1
+        r: isHunter ? 10 : 14,
+        hp: 1,
+        type: isHunter ? 'hunter' : 'asteroid'
       });
     }
 
     // Enemies
     for (const e of this.enemies) {
-      e.y += e.vy;
+      e.y += e.vy * G.dt;
+      
+      if (e.type === 'hunter') {
+        const dx = this.x - e.x;
+        e.x += Math.sign(dx) * 1.5 * G.dt;
+      }
       // Hit player
       const dx = e.x - this.x;
       const dy = e.y - this.y;
@@ -113,13 +120,19 @@ export const shooter = {
 
     // Enemies
     for (const e of this.enemies) {
-      c.fillStyle = '#ef4444';
-      c.shadowColor = '#ef4444';
-      c.shadowBlur = 10;
-      c.beginPath();
-      c.arc(e.x, e.y, e.r, 0, Math.PI * 2);
-      c.fill();
-      c.shadowBlur = 0;
+      if (e.type === 'hunter') {
+        c.fillStyle = '#ef4444';
+        c.beginPath();
+        c.moveTo(e.x, e.y + e.r);
+        c.lineTo(e.x - e.r, e.y - e.r);
+        c.lineTo(e.x + e.r, e.y - e.r);
+        c.fill();
+      } else {
+        c.fillStyle = 'rgba(255,255,255,0.3)';
+        c.beginPath();
+        c.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+        c.fill();
+      }
     }
 
     // Bullets
