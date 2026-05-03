@@ -24,6 +24,7 @@ export const flappy = {
     this.distance = 0;
     // Lowered distance needed
     this.distanceNeeded = 10;
+    this.jumpConsumed = false;
     G.carryover.flappyHeight = 0;
   },
 

@@ -222,7 +222,7 @@ export const jumper = {
     c.fillStyle = '#fff';
     c.font = 'bold 14px Courier New';
     c.textAlign = 'center';
-    c.fillText('КРИСТАЛЛЫ: ' + this.crystalsCollected + ' / ' + this.crystalsNeeded, this.width / 2, 80);
+    c.fillText('КРИСТАЛЛЫ: ' + this.crystalsCollected + ' / ' + this.crystalsNeeded, G.W() / 2, 80);
     c.textAlign = 'left';
   },
 

@@ -170,10 +170,11 @@ export const arkanoid = {
   },
 
   getSnapshot() {
+    const b = this.balls[0] || { x: G.W()/2, y: G.H()/2 };
     return {
       mode: 2,
-      px: this.ballX,
-      py: this.ballY,
+      px: b.x,
+      py: b.y,
       paddleX: this.paddleX,
       paddleY: this.paddleY,
       paddleW: this.paddleW,
