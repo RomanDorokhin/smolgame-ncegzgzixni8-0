@@ -82,9 +82,8 @@ function updateCurrent() {
   const hint = document.getElementById('mobileHint');
   if (hint && G.running && !G.morphing) {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const isJumpMode = (G.gameMode === 0 || G.gameMode === 4);
     
-    if (isMobile && isJumpMode && !G._hintShown) {
+    if (isMobile && !G._hintShown) {
       const texts = [
         'ТАПНИ ДЛЯ ПРЫЖКА / СВАЙП ВЛЕВО-ВПРАВО',
         'СВАЙПАЙ В 4 СТОРОНЫ ДЛЯ ПОВОРОТА',
@@ -95,14 +94,12 @@ function updateCurrent() {
       hint.textContent = texts[G.gameMode];
       hint.classList.remove('hidden');
       G._hintShown = true;
-      if (!G.hintTimer) G.hintTimer = performance.now();
+      G.hintTimer = performance.now();
     }
     
     if (G.hintTimer && performance.now() - G.hintTimer > 3000) {
       hint.classList.add('hidden');
     }
-    
-    if (!isJumpMode) G._hintShown = false;
   }
 
   let mode = G.gameMode;
@@ -163,7 +160,11 @@ function loop(timestamp) {
   if (!G.running) return;
   G.rafId = requestAnimationFrame(loop);
 
-  if (!lastTime) lastTime = timestamp;
+  if (lastTime === 0) {
+    lastTime = timestamp;
+    G.rafId = requestAnimationFrame(loop);
+    return;
+  }
   G.dt = Math.min((timestamp - lastTime) / (1000 / 60), 3);
   lastTime = timestamp;
 
@@ -174,7 +175,7 @@ function loop(timestamp) {
   updateChaos();
   updateParticles();
   updateTrails();
-  if (G.cycle >= 5 && !G.isVictory) {
+  if (G.cycle >= 5 && !G.isVictory && !G.morphing) {
     if (!G.bossInited) { boss.init(); G.bossInited = true; }
     boss.update();
   }
@@ -198,6 +199,7 @@ function loop(timestamp) {
     if (G.morphT >= 1) {
       G.morphing = false;
       G.hintTimer = 0; // Reset hint timer on morph
+      G._hintShown = false;
     }
   } else {
     drawCurrent();

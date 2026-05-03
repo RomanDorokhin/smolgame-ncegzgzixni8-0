@@ -60,6 +60,10 @@ export const arkanoid = {
     if (G.keys['ArrowLeft'] || G.keys['KeyA']) this.paddleX -= speed;
     if (G.keys['ArrowRight'] || G.keys['KeyD']) this.paddleX += speed;
 
+    if (G.touchDir !== 0) {
+      this.paddleX += G.touchDir * speed;
+    }
+
     if (this.paddleX < 0) this.paddleX = 0;
     if (this.paddleX > G.W() - this.paddleW) this.paddleX = G.W() - this.paddleW;
 

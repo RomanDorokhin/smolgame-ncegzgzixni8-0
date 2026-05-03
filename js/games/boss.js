@@ -39,6 +39,8 @@ export const boss = {
     }
 
     // Update hazards
+    if (this.hazards.length > 100) this.hazards.shift(); // Cap hazards to prevent lag
+
     for (let i = this.hazards.length - 1; i >= 0; i--) {
       const h = this.hazards[i];
       if (h.vx) h.x += h.vx * G.dt;
@@ -50,11 +52,15 @@ export const boss = {
       if (m) {
         if (m.x !== undefined) px = m.x;
         else if (m.paddleX !== undefined) px = m.paddleX + (m.paddleW || 0) / 2;
-        else if (m.body && m.body[0]) px = m.body[0].x * (m.cellSize || 20);
+        else if (m.body && m.body.length > 0) {
+          // Fix: Use head instead of tail
+          const head = m.body[m.body.length - 1];
+          px = head.x * (m.cellSize || 20) + (m.fieldX || 0);
+          py = head.y * (m.cellSize || 20) + (m.fieldY || 0);
+        }
 
         if (m.y !== undefined) py = m.y;
         else if (m.paddleY !== undefined) py = m.paddleY;
-        else if (m.body && m.body[0]) py = m.body[0].y * (m.cellSize || 20);
       }
 
       const dist = Math.hypot(px - h.x, py - h.y);
@@ -130,7 +136,6 @@ export const boss = {
     c.fillRect(bx, by, fillW, barH);
   },
 
-  hazards: [],
   spawnBossHazard() {
     this.hazards.push({
       x: Math.random() * G.W(),
