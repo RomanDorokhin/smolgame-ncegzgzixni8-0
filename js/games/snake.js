@@ -31,8 +31,11 @@ export const snake = {
     this.body = [];
     const cx = Math.floor(this.gridW / 2);
     const cy = Math.floor(this.gridH / 2);
-    const bonus = G.carryover.jumperCrystals || 0;
-    for (let i = 4 + bonus; i >= 0; i--) this.body.push({ x: cx - i, y: cy });
+    const maxBonus = Math.min(6, Math.floor(this.gridW / 3)); // Limit bonus length
+    const bonus = Math.min(maxBonus, G.carryover.extraHP || 0);
+    for (let i = 4 + bonus; i >= 0; i--) {
+      this.body.push({ x: Math.max(0, cx - i), y: cy });
+    }
     this.dir = { x: 1, y: 0 };
     this.nextDir = { x: 1, y: 0 };
     this.food = [];
@@ -108,15 +111,22 @@ export const snake = {
   },
 
   spawnMeal() {
-    let tries = 0;
-    while (tries++ < 120) {
-      const x = Math.floor(Math.random() * this.gridW);
-      const y = Math.floor(Math.random() * this.gridH);
-      if (!this.body.find(b => b.x === x && b.y === y) && !this.food.find(f => f.x === x && f.y === y)) {
-        this.food.push({ x, y, isMeal: true, pulse: Math.random() * 6 });
-        return;
+    const free = this.getFreeCells();
+    if (free.length === 0) return;
+    const cell = free[Math.floor(Math.random() * free.length)];
+    this.food.push({ x: cell.x, y: cell.y, isMeal: true, pulse: Math.random() * 6 });
+  },
+
+  getFreeCells() {
+    const free = [];
+    for (let x = 0; x < this.gridW; x++) {
+      for (let y = 0; y < this.gridH; y++) {
+        const isOccupied = this.body.some(b => b.x === x && b.y === y) || 
+                          this.food.some(f => f.x === x && f.y === y);
+        if (!isOccupied) free.push({ x, y });
       }
     }
+    return free;
   },
 
   update() {
@@ -131,8 +141,8 @@ export const snake = {
     if (right && this.dir.x !== -1) this.nextDir = { x: 1, y: 0 };
 
     this.timer++;
-    let finalSpeed = this.speed;
-    if (G.currentMod.name === 'УСКОРЕНИЕ') finalSpeed = Math.max(1, finalSpeed - 2);
+    let finalSpeed = Math.max(3, this.speed); // Never faster than speed 3
+    if (G.currentMod.name === 'УСКОРЕНИЕ') finalSpeed = Math.max(2, finalSpeed - 1);
 
     if (this.timer < finalSpeed) return;
     this.timer = 0;
@@ -161,9 +171,8 @@ export const snake = {
       const piece = this.food[fi];
       this.food.splice(fi, 1);
       
-      this.mealsEaten++; // Every piece counts now
-      
       if (piece.isMeal) {
+        this.mealsEaten++; // ONLY meals count for progress
         G.score += 50;
         if (G.cycle >= 5) boss.damage(5);
         playSound('collect');
@@ -172,7 +181,7 @@ export const snake = {
         }
         spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#a78bfa', 12);
         if (piece.isGolden) {
-          G.carryover.snakeMeals = 20; 
+          G.carryover.shield = 20; 
           G.score += 1000;
           spawnParticles(this.fieldX + nx * this.cellSize, this.fieldY + ny * this.cellSize, '#fbbf24', 40);
           G.triggerMorph('objective');
