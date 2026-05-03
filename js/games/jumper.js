@@ -45,6 +45,8 @@ export const jumper = {
     this.y = G.H() - 250; 
     this.vx = 0; 
     this.vy = 0;
+    this.speed = 6.0;
+    this.score = 0;
     this.spawnTimer = 60; 
     this.autoScroll = 0;
     this.maxReachedY = this.y;
@@ -77,9 +79,15 @@ export const jumper = {
       // Try to find a reachable position
       let px = Math.random() * (G.W() - pw);
       let attempts = 0;
-      while (attempts < 10) {
-        const dist = Math.abs(px + pw/2 - (lastP.x + lastP.w/2));
-        if (dist < 210) break; // More reachable horizontal distance
+      while (attempts < 500) {
+        const py = curY;
+        const dx = Math.abs(px + pw/2 - (lastP.x + lastP.w/2));
+        const dy = Math.abs(py - lastP.y);
+        
+        // Dynamic reachability: strictly limit distance
+        const maxReach = dy > 110 ? 120 : 150;
+        
+        if (dx < maxReach) break; 
         px = Math.random() * (G.W() - pw);
         attempts++;
       }
@@ -112,7 +120,7 @@ export const jumper = {
 
   update() {
     const g = 0.4 * G.dt;
-    const speed = 5 * G.dt;
+    const speed = this.speed * G.dt;
     const jump = -11;
 
     if (G.keys['ArrowLeft']) this.vx = -speed;
@@ -137,6 +145,11 @@ export const jumper = {
       this.vy = jump;
       this.grounded = false;
       this.jumpPressed = true;
+      playSound('jump');
+    }
+    if (this.doubleJumpAvailable && (G.keys['Space'] || G.keys['ArrowUp'] || G.touchJump)) {
+      this.vy = -12; // Stronger double jump
+      this.doubleJumpAvailable = false;
       playSound('jump');
     }
     if (!wantJump) this.jumpPressed = false;
